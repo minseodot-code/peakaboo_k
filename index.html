@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>밑줄 먹는 여우 · 프로토타입</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+
+</head>
+<body>
+<div id="stage">
+  <div id="label">밑줄 먹는 여우 · 프로토타입</div>
+  <div id="viewport"><div id="world">
+    <div class="plane" id="backP"></div>
+    <div class="plane" id="ceilP"></div>
+    <div class="plane" id="wallR"></div>
+    <div class="plane" id="floorP"></div>
+    <div class="plane" id="wallL">
+      <div id="wallShadow"></div>
+      <div id="shelf" tabindex="0" role="button" aria-label="책장. 누르면 여우가 책을 한 권 꺼내 먹어요"><div id="sidePanel"></div></div>
+      <div id="fog"></div>
+    </div>
+    <div id="fox" aria-hidden="true">
+      <div id="foxBob"><div id="foxInner"></div></div>
+      <div id="held">
+        <div class="cover"></div>
+        <div class="spread"><div class="pg l"></div><div class="pg r"></div></div>
+      </div>
+    </div>
+  </div></div>
+  
+</div>
+<div id="hint">커서를 움직이면 여우가 따라와요 · 안쪽에 커서를 두면 더 깊이 들어가요 · 책장을 누르면 책을 먹어요</div>
+
+<div id="dream" aria-live="polite">
+  <div id="ink">
+    <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+    <div class="dream-inner" id="dreamInner"></div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="wobble" x="-10%" y="-10%" width="120%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.011" numOctaves="3" seed="7"/>
+    <feDisplacementMap in="SourceGraphic" scale="70" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
+<script src="js/main.js"></script>
+
+</body>
+</html>
