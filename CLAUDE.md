@@ -6,7 +6,8 @@
 - `index.html` — 화면 뼈대
 - `css/style.css` — 방(3D), 책장, 여우, 꿈 화면 스타일
 - `js/main.js` — 모든 동작 (아래 "동작 흐름" 참고)
-- `data/books.json` — 실제 책 데이터 (title, author, tags, quotes[{t, p}], note, blog)
+- `data/books.json` — 실제 책 데이터 (title, author, tags, quotes[{t, p}], note, blog, color(선택))
+  - 실제 책은 책장 0번 칸 첫 줄부터 순서대로(`.spine.real`, `data-b`=책 번호). 그 외 장식용 책을 누르면 `pickUneaten()`이 안 먹은 실제 책을 고름
 - `assets/fox/*.webp` — 여우 포즈 이미지. 모두 배경 투명, 옆모습은 왼쪽을 봄
 
 빌드 도구 없는 정적 사이트. 라이브러리 추가 없이 순수 HTML/CSS/JS로 유지할 것.

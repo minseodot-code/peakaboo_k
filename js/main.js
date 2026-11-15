@@ -14,12 +14,22 @@ const ASSETS = {
 };
 
 /* =========================================================
-   2) 책 데이터 (지금은 모두 예시예요. 실제 책과 구절로 바꾸면 돼요)
+   2) 책 데이터: data/books.json
+   실제 책은 책장 맨 앞 칸 첫 줄부터 순서대로 꽂히고, 그 뒤는 장식용 책.
+   color(선택)를 넣으면 그 색 책등, 없으면 랜덤.
    ========================================================= */
 let BOOKS = [];  // data/books.json 에서 불러와요
+const NO_BOOKS=[{title:'책 데이터를 불러오지 못했어요',author:'',tags:[],quotes:[{t:'data/books.json 을 확인해 주세요.',p:''}],note:'',blog:''}];
 function loadBooks(){
-  return fetch('data/books.json').then(r=>r.json()).then(b=>{ BOOKS=b; })
-    .catch(()=>{ BOOKS=[{title:'책 데이터를 불러오지 못했어요',author:'',tags:[],quotes:[{t:'data/books.json 을 확인해 주세요.',p:''}],note:'',blog:''}]; });
+  return fetch('data/books.json').then(r=>r.json()).then(b=>{ BOOKS=Array.isArray(b)&&b.length?b:NO_BOOKS; })
+    .catch(()=>{ BOOKS=NO_BOOKS; });
+}
+function bookColor(b){ return b && typeof b.color==='string' && CSS.supports('color', b.color) ? b.color : null; }
+const eatenBooks = new Set();  // 꿈에서 이미 보여준 실제 책 번호
+/* 장식용 책을 누르면: 아직 안 먹은 실제 책 중 하나 (다 먹었으면 전체에서) */
+function pickUneaten(){
+  const all=BOOKS.map((_,i)=>i), left=all.filter(i=>!eatenBooks.has(i)), pool=left.length?left:all;
+  return pool[Math.floor(Math.random()*pool.length)];
 }
 
 /* =========================================================
@@ -210,7 +220,7 @@ function rng(a){ return ()=>{ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1
 function makeSeg(k){
   const r=rng(k*7919+13);
   const seg=document.createElement('div'); seg.className='seg'; seg.dataset.k=k; seg.style.left=(k*SEG)+'px'; seg.style.width=SEG+'px';
-  const rowW=SEG-8-8; let n=0;
+  const rowW=SEG-8-8; let n=0, real=0;
   for (let ri=0; ri<6; ri++){
     const row=document.createElement('div'); row.className='row';
     let used=0; const ws=[];
@@ -221,9 +231,13 @@ function makeSeg(k){
     }
     for (const w of ws){
       const sp=document.createElement('div'); sp.className='spine';
-      const id=k+'-'+n; sp.dataset.id=id; sp.dataset.b=(k*97+n)%BOOKS.length;
+      const id=k+'-'+n; sp.dataset.id=id;
       sp.style.width=w+'px'; sp.style.height=Math.round(80+r()*17)+'%';
-      sp.style.background=PALETTE[Math.floor(r()*PALETTE.length)];
+      let bg=PALETTE[Math.floor(r()*PALETTE.length)];
+      if (k===0 && real<BOOKS.length){   // 맨 앞 칸: 실제 책을 순서대로
+        sp.dataset.b=real; sp.classList.add('real'); bg=bookColor(BOOKS[real])||bg; real++;
+      }
+      sp.style.background=bg;
       sp.style.setProperty('--band', Math.round(8+r()*18)+'%');
       if (goneSet.has(id)) sp.classList.add('gone');
       row.appendChild(sp); n++;
@@ -326,7 +340,8 @@ async function fetchAndEat(chosen){
     if (!near.length) near=all;
     spine=near[Math.floor(Math.random()*near.length)];
   }
-  const book=BOOKS[+spine.dataset.b];
+  const bi=spine.dataset.b!=null ? +spine.dataset.b : pickUneaten();
+  const book=BOOKS[bi]; eatenBooks.add(bi);
   const color=spine.style.background;
   spine.classList.add('picked');
 
