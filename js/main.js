@@ -407,8 +407,10 @@ function startZz(){
 function stopZz(){ clearInterval(zzTimer); zzTimer=null; }
 
 /* 꿈으로 들어가기 */
+let dreamSeq=0;               // 꿈마다 번호: 도중에 깨면 이전 꿈의 남은 연출을 멈추는 데 씀
 async function enterDream(book){
   mode='dream'; eaten++;
+  const my=++dreamSeq;
   const hp=headPoint(); const cx=hp.x, cy=hp.y;
   renderDream(book);
   dream.classList.add('active'); dream.style.filter='url(#wobble)'; ink.scrollTop=0;
@@ -418,10 +420,15 @@ async function enterDream(book){
   const R=Math.hypot(innerWidth,innerHeight)*1.2;
   inkAnim=ink.animate([{clipPath:`circle(0px at ${cx}px ${cy}px)`},{clipPath:`circle(${R}px at ${cx}px ${cy}px)`}],
     {duration:2100/SPD,delay:550/SPD,easing:'cubic-bezier(.5,0,.3,1)',fill:'forwards'});
-  await inkAnim.finished;
+  // 번지는 도중 Esc로 깨면 wake()가 inkAnim을 취소해 여기서 에러가 나므로 조용히 멈춤
+  try { await inkAnim.finished; } catch(e){ return; }
+  if (my!==dreamSeq || mode!=='dream') return;
   dream.style.filter='none'; stopZz();
   const els=[...dreamInner.querySelectorAll('.rv')];
-  for (const el of els){ el.classList.add('in'); await wait(el.classList.contains('q') ? 900 : 380); }
+  for (const el of els){
+    el.classList.add('in'); await wait(el.classList.contains('q') ? 900 : 380);
+    if (my!==dreamSeq || mode!=='dream') return;
+  }
   dreamInner.querySelector('#wake').focus({preventScroll:true});
 }
 function esc(s){ return s.replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -443,13 +450,13 @@ function renderDream(b){
 /* 꿈에서 깨기 */
 async function wake(){
   if (mode!=='dream') return;
-  mode='waking';
+  mode='waking'; stopZz();
   const fade=dream.animate([{opacity:1},{opacity:0}],{duration:800/SPD,easing:'ease',fill:'forwards'});
   if (zoomAnim){ zoomAnim.cancel(); }
   const back=stage.animate([{transform:'scale(3)',filter:'blur(10px)'},{transform:'scale(1)',filter:'blur(0px)'}],{duration:1100/SPD,easing:'cubic-bezier(.4,0,.2,1)'});
   setPose('sit');
   await fade.finished;
-  dream.classList.remove('active'); fade.cancel(); if (inkAnim) inkAnim.cancel();
+  dream.classList.remove('active'); dream.style.filter='none'; fade.cancel(); if (inkAnim) inkAnim.cancel();
   await back.finished;
   await wait(300);
   setPose('stand');
