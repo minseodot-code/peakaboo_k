@@ -19,6 +19,7 @@
 4. 책 클릭 → `fetchAndEat(spine)`: 걸어가서 꺼냄 → 앉아서 읽음 → 먹음 → 잠
 5. `enterDream(book)`: 머리 쪽으로 확대 + 물감 번지듯 꿈 화면 → 구절 순서대로 등장
 6. `wake()`: 현실로 복귀 후 다시 대기
+- 꿈 주소: `#book-제목`(공백→`-`, `bookSlug()`). 그 주소로 들어오면 `intro()` 대신 `openFromLink()`로 바로 꿈. 구절은 `revealOnScroll()`이 화면에 들어올 때 하나씩 띄움. 물감 색은 `tintDream()`이 책 color로 `--t1/--t3` 지정
 
 ## 좌표
 - 3D 방 단위는 px. z는 화면 쪽이 +. 상수: `P, ZN, WX, FLOOR, DEPTH, SH_START, SEG, ZDEEP, ZFRONT`
