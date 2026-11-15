@@ -132,7 +132,9 @@ function place(nx,nz=z){ x=nx; z=nz; fox.style.transform=tf(x,z); fox.style.setP
 function sx(px,pz){ return px*P/(P-pz); }
 function applyClasses(){ fox.className = ['pose-'+pose, BEHAV[pose]||'', facing==='right'?'face-right':'', imgOK?'img-mode':''].join(' ').trim(); }
 function face(dir){ facing=dir; inner.style.transform = dir==='left' ? 'none' : 'scaleX(-1)'; applyClasses(); }
-/* 여우 그림 설정: 프레임, 초당 프레임 수, 화면 높이(px), 그림자 폭, 머리 위치(비율) */
+/* 여우 그림 설정: 프레임, 초당 프레임 수, 화면 높이(px), 그림자 폭, 머리 위치(비율)
+   dx·dy(선택): 그림 위치 보정(px). dx +는 여우가 보는 반대쪽(꼬리 쪽), dy +는 아래
+   URL 끝에 #debug 를 붙이면 조정 패널로 눈으로 보며 맞추고 값을 복사할 수 있어요 (js/debug.js) */
 const POSES = {
   crawl: { f:['crawl_1','crawl_2','crawl_3','crawl_4'], stride:22, bob:2, h:135, sh:'58%' },
   walk:  { f:['walk_1','walk_2','walk_3','walk_4'],     stride:30, bob:4, h:255, sh:'27%' },
@@ -150,18 +152,23 @@ function preloadFox(){
     .then(()=>{ imgOK=true; }).catch(()=>{ imgOK=false; });
 }
 let curImg=null, curFrame=0, stepDist=0;
+/* 포즈의 크기·위치 보정·그림자 폭을 그림에 적용 */
+function applyLook(img,c){
+  img.style.height=c.h+'px';
+  img.style.setProperty('--dx',(c.dx||0)+'px'); img.style.setProperty('--dy',(c.dy||0)+'px');
+  fox.style.setProperty('--shw', c.sh);
+}
 function setPose(p){
   if (p===pose && (imgOK ? curImg : inner.firstChild)){ applyClasses(); return; }
   pose=p; clearInterval(frameTimer); frameTimer=null; bob.style.transform='';
   if (imgOK){
     const c=POSES[p]; const old=[...inner.querySelectorAll('img')];
     const img=new Image(); img.alt=''; img.draggable=false; img.className='enter';
-    img.src=SRC(c.f[0]); img.style.height=c.h+'px';
+    img.src=SRC(c.f[0]); applyLook(img,c);
     inner.appendChild(img); curImg=img; curFrame=0; stepDist=0;
     requestAnimationFrame(()=>requestAnimationFrame(()=>img.classList.remove('enter')));
     setTimeout(()=>old.forEach(o=>o.remove()), 170);
     if (c.fps && !c.stride){ let i=0; frameTimer=setInterval(()=>{ i=(i+1)%c.f.length; img.src=SRC(c.f[i]); }, 1000/(c.fps*SPD)); }
-    fox.style.setProperty('--shw', c.sh);
   } else { curImg=null; inner.innerHTML = ASSETS[p] ? `<img src="${ASSETS[p]}" alt="">` : SVG[p](); }
   applyClasses();
 }
@@ -505,5 +512,12 @@ document.documentElement.addEventListener('pointerleave', ()=>{ pointerIn=false;
 addEventListener('resize', fitRoom);
 
 /* 시작 */
-function start(){ fitRoom(); Promise.all([loadBooks(), preloadFox()]).then(()=>{ applyCam(); intro(); }); }
+function start(){ fitRoom(); Promise.all([loadBooks(), preloadFox()]).then(()=>{ applyCam(); intro(); loadDebug(); }); }
+/* #debug 일 때만 조정 패널 스크립트를 불러옴 (없으면 패널 코드 자체가 로드되지 않음) */
+function loadDebug(){
+  if (location.hash!=='#debug') return;
+  if (window.FoxDebug){ FoxDebug.show(); return; }
+  const sc=document.createElement('script'); sc.src='js/debug.js'; document.body.appendChild(sc);
+}
+addEventListener('hashchange', ()=>{ if (location.hash==='#debug') loadDebug(); else if (window.FoxDebug) FoxDebug.hide(); });
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
