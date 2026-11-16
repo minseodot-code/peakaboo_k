@@ -102,6 +102,8 @@ const SVG = {
 SVG.walk = () => SVG.stand(false);
 SVG.reach = () => SVG.stand(true);
 SVG.eat = () => SVG.sit('chew');
+SVG.reachSit = () => SVG.sit();
+SVG.rest = () => SVG.stand(false);
 
 /* =========================================================
    4) 동작
@@ -113,7 +115,7 @@ const stage=$('#stage'), fox=$('#fox'), bob=$('#foxBob'), inner=$('#foxInner'),
 const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const SPD = RM ? 3 : 1;
 const PALETTE=['#8C6A5A','#A98F6B','#6F7F78','#9AA4AE','#B98B7A','#7B6F8C','#C2A57A','#5F6B73','#A7826A','#8E9C85','#B4A08A','#6E5B4E'];
-const BEHAV={crawl:'walking',walk:'walking',reach:'reaching',eat:'chewing',sleep:'sleeping'};
+const BEHAV={crawl:'walking',walk:'walking',reach:'reaching',reachSit:'reaching',eat:'chewing',sleep:'sleeping',rest:'resting'};
 
 /* 방 좌표 (px, z는 화면 쪽이 +) */
 const P=1100, ZN=300, WX=-600, FLOOR=300, DEPTH=72, SH_START=250, SH_LEN=1350, FOXS=320;
@@ -138,6 +140,10 @@ const POSES = {
   walk:  { f:['walk_1','walk_2','walk_3','walk_4'],     stride:30, bob:4, h:255, sh:'27%' },
   stand: { f:['stand'],     h:262, sh:'21%' },
   reach: { f:['reach'],     h:272, sh:'26%' },
+  reachSit:{ f:['reach_sit'], h:225, sh:'40%' },  // 앉아서 뒤적이기
+  // 앉아서 쉬기: 지금은 책 없이 앉은 그림이 없어 stand 그림 + 큰 숨쉬기(css .resting)로 임시 처리.
+  // 그림이 생기면 f만 ['rest'] 등으로 바꾸고 h·sh를 맞추면 됨
+  rest:  { f:['stand'],     h:262, sh:'21%' },
   sit:   { f:['read'],      h:205, sh:'40%' },
   eat:   { f:['eat_1','eat_2'], fps:3, h:215, sh:'40%', mouth:[.44,.3] },
   sleep: { f:['sleep'],     h:118, sh:'74%', head:[.2,.3] }
@@ -282,14 +288,20 @@ async function idle(){
     setPose('walk');
     await moveTo(FX+rand(-10,25), rand(-500, ZFRONT-60), 80);
     if (my!==run || mode!=='idle') break;
-    if (Math.random()<.65){ face('left'); setPose('reach'); await wait(rand(1300,2200)); }
+    const r=Math.random();
+    if (r<.42){ face('left'); setPose('reach'); await wait(rand(1300,2200)); }
+    else if (r<.65){ face('left'); setPose('reachSit'); await wait(rand(2200,3800)); }
     else { setPose('stand'); await wait(rand(800,1500)); }
   }
 }
 
 /* 커서 따라가기 */
 let following=false, pointerIn=false, px=0, py=0, lastT=0, stillSince=0;
-function startFollow(){ following=true; run++; stopMove(); }
+const REST_AFTER=10000;        // 커서가 이만큼(ms) 안 움직이면 앉아서 쉼
+let pointerMovedAt=0;          // 마지막으로 커서가 움직인 시각
+let reachKind='reach', reachSwapAt=0;  // 책장 앞에 멈춰 있는 동안 서서/앉아서 뒤적이기를 번갈아 고름
+function pickReach(t){ reachKind=Math.random()<.35?'reachSit':'reach'; reachSwapAt=t+rand(3500,7000); }
+function startFollow(){ following=true; run++; stopMove(); pointerMovedAt=performance.now(); }  // 꿈에서 깬 직후 바로 쉬지 않도록 시계를 새로 시작
 function screenToTarget(cx,cy){
   const K=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--k'))||1;
   const ox=innerWidth/2, oy=innerHeight*0.42, off=innerHeight*0.08;
@@ -322,10 +334,15 @@ function tick(t){
     if (r.left<=3){ face(scroll>0?'right':'left'); stepFrames(Math.abs(dcam)); }
     moving=true;
   }
-  if (moving){ if (pose!=='walk') setPose('walk'); stillSince=t; }
+  if (moving){ if (pose!=='walk') setPose('walk'); stillSince=t; reachSwapAt=0; }
   else if (t-stillSince>140){
-    const want=(g.onShelf && Math.abs(x-FX)<8 && t-stillSince>700)?'reach':'stand';
-    if (pose!==want){ if (want==='reach') face('left'); setPose(want); }
+    let want='stand';
+    if (performance.now()-pointerMovedAt>REST_AFTER) want='rest';
+    else if (g.onShelf && Math.abs(x-FX)<8 && t-stillSince>700){
+      if (t>=reachSwapAt) pickReach(t);
+      want=reachKind;
+    }
+    if (pose!==want){ if (want==='reach'||want==='reachSit') face('left'); setPose(want); }
   }
 }
 requestAnimationFrame(tick);
@@ -498,8 +515,8 @@ function onShelf(e){
 shelf.addEventListener('click', onShelf);
 shelf.addEventListener('keydown', e=>{ if (e.key==='Enter'||e.key===' '){ e.preventDefault(); onShelf(); } });
 addEventListener('keydown', e=>{ if (e.key==='Escape' && mode==='dream') wake(); });
-addEventListener('pointermove', e=>{ px=e.clientX; py=e.clientY; pointerIn=true; if (mode==='idle' && !following) startFollow(); });
-addEventListener('pointerdown', e=>{ px=e.clientX; py=e.clientY; pointerIn=true; if (mode==='idle' && !following) startFollow(); });
+addEventListener('pointermove', e=>{ px=e.clientX; py=e.clientY; pointerIn=true; pointerMovedAt=performance.now(); if (mode==='idle' && !following) startFollow(); });
+addEventListener('pointerdown', e=>{ px=e.clientX; py=e.clientY; pointerIn=true; pointerMovedAt=performance.now(); if (mode==='idle' && !following) startFollow(); });
 document.documentElement.addEventListener('pointerleave', ()=>{ pointerIn=false; if (following){ following=false; if (mode==='idle') idle(); } });
 
 addEventListener('resize', fitRoom);
