@@ -133,16 +133,16 @@ function tf(px,pz){ return `translate3d(${px-FOXS/2}px,${FLOOR-FOXS}px,${pz}px)`
 function place(nx,nz=z){ x=nx; z=nz; fox.style.transform=tf(x,z); fox.style.setProperty('--br', Math.max(.5,Math.min(.97,.94+z*.0007)).toFixed(3)); }
 function sx(px,pz){ return px*P/(P-pz); }
 function applyClasses(){ fox.className = ['pose-'+pose, BEHAV[pose]||'', facing==='right'?'face-right':'', imgOK?'img-mode':''].join(' ').trim(); }
-function face(dir){ facing=dir; inner.style.transform = dir==='left' ? 'none' : 'scaleX(-1)'; applyClasses(); }
+function face(dir){ facing=dir; inner.style.transform = dir==='left' ? 'none' : 'scaleX(-1)'; applyClasses(); if (typeof positionHeld==='function') positionHeld(); }
 /* 여우 그림 설정: 프레임, 초당 프레임 수, 화면 높이(px), 그림자 폭, 머리 위치(비율)
    dx·dy(선택): 그림 위치 보정(px). dx +는 여우가 보는 반대쪽(꼬리 쪽), dy +는 아래
    URL 끝에 #debug 를 붙이면 조정 패널로 눈으로 보며 맞추고 값을 복사할 수 있어요 (js/debug.js) */
 const POSES = {
   crawl: { f:['crawl_1','crawl_2','crawl_3','crawl_4'], stride:22, bob:2, h:135, sh:'58%' },
   // 미드저니 영상에서 뽑은 걸음 한 주기(16프레임). 예전 4장짜리로 돌아가려면 f를 ['walk_1','walk_2','walk_3','walk_4'], stride:30, bob:4, bobPer:1 로
-  walk:  { f:Array.from({length:16},(_,i)=>'walkv_'+String(i+1).padStart(2,'0')), stride:11, bob:1.5, bobPer:8, h:255, sh:'27%' },
+  walk:  { f:Array.from({length:16},(_,i)=>'walkv_'+String(i+1).padStart(2,'0')), stride:11, bob:1.5, bobPer:8, h:255, sh:'27%', carry:[.11,.24] },
   stand: { f:['stand'],     h:262, sh:'21%' },
-  reach: { f:['reach'],     h:272, sh:'26%' },
+  reach: { f:['reach'],     h:272, sh:'26%', carry:[.25,.155] },
   reachSit:{ f:['reach_sit'], h:225, sh:'40%' },  // 앉아서 뒤적이기
   // 앉아서 쉬기: 지금은 책 없이 앉은 그림이 없어 stand 그림 + 큰 숨쉬기(css .resting)로 임시 처리.
   // 그림이 생기면 f만 ['rest'] 등으로 바꾸고 h·sh를 맞추면 됨
@@ -177,7 +177,18 @@ function setPose(p){
     setTimeout(()=>old.forEach(o=>o.remove()), 170);
     if (c.fps && !c.stride){ let i=0; frameTimer=setInterval(()=>{ i=(i+1)%c.f.length; img.src=SRC(c.f[i]); }, 1000/(c.fps*SPD)); }
   } else { curImg=null; inner.innerHTML = ASSETS[p] ? `<img src="${ASSETS[p]}" alt="">` : SVG[p](); }
-  applyClasses();
+  applyClasses(); positionHeld();
+}
+/* 책을 입에 물고 다니기: 포즈의 carry(그림 안 입 위치 비율)에 책을 붙임 */
+function positionHeld(){
+  const c=POSES[pose];
+  if (!imgOK || !c || !c.carry || !curImg){ held.classList.add('no-anchor'); return; }
+  held.classList.remove('no-anchor');
+  const ar=(curImg.naturalWidth||1)/(curImg.naturalHeight||1), w=c.h*ar;
+  let px=FOXS/2 - w/2 + (c.dx||0) + c.carry[0]*w;
+  const py=FOXS - c.h + (c.dy||0) + c.carry[1]*c.h;
+  if (facing==='right') px=FOXS-px;
+  held.style.left=px.toFixed(1)+'px'; held.style.top=py.toFixed(1)+'px';
 }
 /* 걸은 거리에 맞춰 다리 프레임과 몸 튐을 넘김 (발 미끄러짐 방지) */
 function stepFrames(d){
@@ -379,16 +390,34 @@ async function fetchAndEat(chosen){
   setPose('walk'); await moveTo(FX, bz, 140);
   face('left'); setPose('reach'); await wait(950);
   let r=spine.getBoundingClientRect();
-  const fly=document.createElement('div'); fly.className='flybook';
-  Object.assign(fly.style,{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px',background:color});
-  document.body.appendChild(fly); spine.classList.add('gone'); goneSet.add(spine.dataset.id);
-  const fr=fox.getBoundingClientRect();
-  const tx=fr.left+fr.width*0.38-r.left, ty=fr.top+fr.height*0.5-r.top;
-  await fly.animate([{transform:'none'},{transform:`translate(${tx}px,${ty-60}px) rotate(40deg)`, offset:.55},{transform:`translate(${tx}px,${ty}px) rotate(90deg) scale(.6)`}],
-    {duration:750/SPD,easing:'cubic-bezier(.3,.7,.4,1)',fill:'forwards'}).finished;
-  fly.remove();
+  held.style.setProperty('--cover', color);
+  if (imgOK){
+    // 책장에서 빠져나온 책이 포물선을 그리며 여우 입으로 날아가 물림
+    held.className='closed hidden'; positionHeld();
+    const hr=held.querySelector('.cover').getBoundingClientRect();
+    const fly=document.createElement('div'); fly.className='flybook';
+    Object.assign(fly.style,{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px','--cover':color});
+    document.body.appendChild(fly); spine.classList.add('gone'); goneSet.add(spine.dataset.id);
+    const rot=facing==='right'?16:-16;
+    await fly.animate([
+      {left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px',transform:'rotate(0deg)'},
+      {left:(r.left+(hr.left-r.left)*.5)+'px',top:(Math.min(r.top,hr.top)-50)+'px',width:hr.width+'px',height:hr.height+'px',transform:`rotate(${rot*2.5}deg)`,offset:.55},
+      {left:hr.left+'px',top:hr.top+'px',width:hr.width+'px',height:hr.height+'px',transform:`rotate(${rot}deg)`}
+    ],{duration:800/SPD,easing:'cubic-bezier(.3,.7,.4,1)',fill:'forwards'}).finished;
+    held.className='closed'; fly.remove();
+    await wait(250);
+  } else {
+    const fly=document.createElement('div'); fly.className='flybook';
+    Object.assign(fly.style,{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px',background:color});
+    document.body.appendChild(fly); spine.classList.add('gone'); goneSet.add(spine.dataset.id);
+    const fr=fox.getBoundingClientRect();
+    const tx=fr.left+fr.width*0.38-r.left, ty=fr.top+fr.height*0.5-r.top;
+    await fly.animate([{transform:'none'},{transform:`translate(${tx}px,${ty-60}px) rotate(40deg)`, offset:.55},{transform:`translate(${tx}px,${ty}px) rotate(90deg) scale(.6)`}],
+      {duration:750/SPD,easing:'cubic-bezier(.3,.7,.4,1)',fill:'forwards'}).finished;
+    fly.remove();
+    held.className='closed';
+  }
 
-  held.style.setProperty('--cover', color); held.className='closed';
   setPose('walk');
   await moveTo(FX, Math.max(z, -200), 150);
   await moveTo(SEAT.x, SEAT.z, 110);
@@ -426,14 +455,25 @@ function bite(b){
   for (let i=0;i<=8;i++){ const px=i*12.5; const py=Math.min(100, y + (i%2? rand(4,10) : rand(-3,2))); pts.push(`${px}% ${py}%`); }
   spread.style.clipPath = `polygon(${pts.join(',')},100% 100%,0% 100%)`;
 }
+/* 먹을 때 떨어지는 종잇조각: 찢긴 모양, 글줄 무늬, 팔랑이며 떨어져 바닥에서 사라짐 */
 function crumbs(){
-  const r=mouthRect(); const floorY=fox.getBoundingClientRect().bottom;
-  for (let i=0;i<5;i++){
+  const r=mouthRect(); const floorY=fox.getBoundingClientRect().bottom-4;
+  const n=imgOK?3:4;
+  for (let i=0;i<n;i++){
     const c=document.createElement('div'); c.className='crumb';
-    const s=rand(3,7); Object.assign(c.style,{width:s+'px',height:s*rand(.6,1.4)+'px',left:(r.left+rand(0,r.width))+'px',top:(r.top+rand(0,r.height*.3))+'px'});
+    const w=rand(5,10), h=w*rand(.55,1.1);
+    const pts=Array.from({length:6},(_,k)=>{ const a=k/6*Math.PI*2+rand(-.3,.3), rr=rand(.32,.5); return `${(50+Math.cos(a)*rr*100).toFixed(0)}% ${(50+Math.sin(a)*rr*100).toFixed(0)}%`; });
+    Object.assign(c.style,{width:w+'px',height:h+'px',left:(r.left+rand(0,r.width))+'px',top:(r.top+rand(0,r.height*.4))+'px',clipPath:`polygon(${pts.join(',')})`});
     document.body.appendChild(c);
-    c.animate([{transform:'none',opacity:1},{transform:`translate(${rand(-40,40)}px,${floorY-r.top}px) rotate(${rand(-200,200)}deg)`,opacity:.2}],
-      {duration:rand(800,1300)/SPD,easing:'cubic-bezier(.4,0,.9,.6)'}).finished.then(()=>c.remove());
+    const fall=floorY-r.top, sway=rand(10,22)*(Math.random()<.5?-1:1), spin=rand(120,320)*(Math.random()<.5?-1:1);
+    const dur=rand(1300,1900)/SPD;
+    c.animate([
+      {transform:'translate(0,0) rotate(0deg) rotateX(0deg)',opacity:0},
+      {transform:`translate(${sway}px,${fall*.25}px) rotate(${spin*.3}deg) rotateX(60deg)`,opacity:1,offset:.15},
+      {transform:`translate(${-sway*.6}px,${fall*.55}px) rotate(${spin*.6}deg) rotateX(140deg)`,offset:.5},
+      {transform:`translate(${sway*.4}px,${fall}px) rotate(${spin}deg) rotateX(180deg)`,opacity:.9,offset:.8},
+      {transform:`translate(${sway*.4}px,${fall}px) rotate(${spin}deg) rotateX(180deg)`,opacity:0}
+    ],{duration:dur*1.6,easing:'ease-in'}).finished.then(()=>c.remove());
   }
 }
 function startZz(){
@@ -606,7 +646,7 @@ document.documentElement.addEventListener('pointerleave', ()=>{ pointerIn=false;
 addEventListener('resize', fitRoom);
 
 /* 시작 */
-function start(){ fitRoom(); Promise.all([loadBooks(), preloadFox()]).then(()=>{ applyCam(); intro(); loadDebug(); }); }
+function start(){ if (held.parentNode!==bob) bob.appendChild(held); fitRoom(); Promise.all([loadBooks(), preloadFox()]).then(()=>{ applyCam(); intro(); loadDebug(); }); }
 /* #debug 일 때만 조정 패널 스크립트를 불러옴 (없으면 패널 코드 자체가 로드되지 않음) */
 function loadDebug(){
   if (location.hash!=='#debug') return;
