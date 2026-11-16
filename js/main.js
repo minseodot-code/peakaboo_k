@@ -139,7 +139,8 @@ function face(dir){ facing=dir; inner.style.transform = dir==='left' ? 'none' : 
    URL 끝에 #debug 를 붙이면 조정 패널로 눈으로 보며 맞추고 값을 복사할 수 있어요 (js/debug.js) */
 const POSES = {
   crawl: { f:['crawl_1','crawl_2','crawl_3','crawl_4'], stride:22, bob:2, h:135, sh:'58%' },
-  walk:  { f:['walk_1','walk_2','walk_3','walk_4'],     stride:30, bob:4, h:255, sh:'27%' },
+  // 미드저니 영상에서 뽑은 걸음 한 주기(16프레임). 예전 4장짜리로 돌아가려면 f를 ['walk_1','walk_2','walk_3','walk_4'], stride:30, bob:4, bobPer:1 로
+  walk:  { f:Array.from({length:16},(_,i)=>'walkv_'+String(i+1).padStart(2,'0')), stride:11, bob:1.5, bobPer:8, h:255, sh:'27%' },
   stand: { f:['stand'],     h:262, sh:'21%' },
   reach: { f:['reach'],     h:272, sh:'26%' },
   reachSit:{ f:['reach_sit'], h:225, sh:'40%' },  // 앉아서 뒤적이기
@@ -184,7 +185,7 @@ function stepFrames(d){
   stepDist+=d;
   const i=Math.floor(stepDist/c.stride)%c.f.length;
   if (i!==curFrame){ curFrame=i; curImg.src=SRC(c.f[i]); }
-  bob.style.transform=`translateY(${(-Math.abs(Math.sin(stepDist/c.stride*Math.PI))*c.bob).toFixed(2)}px)`;
+  bob.style.transform=`translateY(${(-Math.abs(Math.sin(stepDist/(c.stride*(c.bobPer||1))*Math.PI))*c.bob).toFixed(2)}px)`;
 }
 function headPoint(){
   const img=curImg;
