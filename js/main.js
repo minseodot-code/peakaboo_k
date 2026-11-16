@@ -277,6 +277,8 @@ function spineZ(sp){
 
 /* 시작: 오른쪽에서 네 발로 기어 나오기 */
 async function intro(){
+  const linked=bookFromHash();
+  if (linked!=null){ openFromLink(linked); return; }
   setPose('crawl'); face('left'); place(760,-180);
   await wait(500);
   await moveTo(FX, -180, 170);
@@ -451,7 +453,7 @@ async function enterDream(book){
   mode='dream'; eaten++;
   const my=++dreamSeq;
   const hp=headPoint(); const cx=hp.x, cy=hp.y;
-  renderDream(book);
+  renderDream(book); tintDream(book); setDreamHash(book);
   dream.classList.add('active'); dream.style.filter='url(#wobble)'; ink.scrollTop=0;
   stage.style.transformOrigin=`${cx}px ${cy}px`;
   zoomAnim=stage.animate([{transform:'scale(1)',filter:'blur(0px)'},{transform:'scale(3)',filter:'blur(10px)'}],
@@ -463,12 +465,84 @@ async function enterDream(book){
   try { await inkAnim.finished; } catch(e){ return; }
   if (my!==dreamSeq || mode!=='dream') return;
   dream.style.filter='none'; stopZz();
-  const els=[...dreamInner.querySelectorAll('.rv')];
-  for (const el of els){
-    el.classList.add('in'); await wait(el.classList.contains('q') ? 900 : 380);
-    if (my!==dreamSeq || mode!=='dream') return;
+  revealOnScroll(my);
+}
+
+/* 구절이 많아도 화면에 들어온 것부터 차례로 떠오르게: 스크롤하면 다음 구절이 하나씩 */
+let revealIO=null;
+function revealOnScroll(my){
+  if (revealIO) revealIO.disconnect();
+  const queue=[]; let running=false, focused=false;
+  async function run(){
+    if (running) return; running=true;
+    while (queue.length){
+      if (my!==dreamSeq || mode!=='dream'){ running=false; return; }
+      queue.sort((a,b)=>a.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_FOLLOWING?-1:1);
+      const el=queue.shift(); el.classList.add('in');
+      await wait(el.classList.contains('q') ? 900 : 380);
+    }
+    running=false;
+    // 첫 화면이 다 떠오르면 깨기 버튼에 포커스 (키보드 사용자가 바로 나갈 수 있게)
+    if (!focused && my===dreamSeq && mode==='dream'){ focused=true; const w=dreamInner.querySelector('#wake'); if (w) w.focus({preventScroll:true}); }
   }
-  dreamInner.querySelector('#wake').focus({preventScroll:true});
+  revealIO=new IntersectionObserver(es=>{
+    for (const e of es) if (e.isIntersecting){ revealIO.unobserve(e.target); queue.push(e.target); }
+    run();
+  },{root:ink, threshold:.15, rootMargin:'0px 0px -6% 0px'});
+  dreamInner.querySelectorAll('.rv').forEach(el=>revealIO.observe(el));
+}
+
+/* 책 color를 꿈 배경의 번지는 물감에 은은하게 (없으면 기본 색) */
+function tintDream(b){
+  const c=bookColor(b);
+  if (!c){ ink.style.removeProperty('--t1'); ink.style.removeProperty('--t3'); return; }
+  const probe=document.createElement('i'); probe.style.color=c; document.body.appendChild(probe);
+  const m=getComputedStyle(probe).color.match(/[\d.]+/g); probe.remove();
+  if (!m) return;
+  // 종이색 쪽으로 살짝 밝혀서 어두운 색도 무겁지 않게
+  const [r,g,bl]=m.slice(0,3).map(v=>Math.round(+v+(255-+v)*.22));
+  ink.style.setProperty('--t1',`rgba(${r},${g},${bl},.30)`);
+  ink.style.setProperty('--t3',`rgba(${r},${g},${bl},.20)`);
+}
+
+/* 책마다 공유용 주소: #book-제목 (띄어쓰기는 -) */
+function bookSlug(b){ return String(b.title||'').normalize('NFC').trim().replace(/\s+/g,'-'); }
+function bookLink(b){ return location.origin+location.pathname+location.search+'#book-'+encodeURIComponent(bookSlug(b)); }
+function bookFromHash(){
+  const h=location.hash; if (!h.startsWith('#book-')) return null;
+  let want; try { want=decodeURIComponent(h.slice(6)).normalize('NFC'); } catch(e){ return null; }
+  const i=BOOKS.findIndex(b=>bookSlug(b)===want);
+  return i<0 ? null : i;
+}
+function setDreamHash(b){
+  if (location.hash==='#debug' || BOOKS===NO_BOOKS) return;   // 조정 패널을 보는 중이면 주소를 건드리지 않음
+  history.replaceState(null,'','#book-'+encodeURIComponent(bookSlug(b)));
+}
+function clearDreamHash(){
+  if (location.hash.startsWith('#book-')) history.replaceState(null,'',location.pathname+location.search);
+}
+/* 링크로 들어왔을 때: 여우는 이미 책을 먹고 잠든 상태에서 바로 꿈으로 */
+async function openFromLink(i){
+  mode='busy'; hideHint();
+  const sp=shelf.querySelector(`.spine.real[data-b="${i}"]`);
+  if (sp){ sp.classList.add('gone'); goneSet.add(sp.dataset.id); }
+  eatenBooks.add(i);
+  face('left'); place(SEAT.x, SEAT.z); setPose('sleep'); startZz();
+  await wait(900);
+  await enterDream(BOOKS[i]);
+}
+/* 페이지를 보는 중에 #book-제목 주소로 바꾸면: 여우가 그 책을 꺼내 먹음 */
+addEventListener('hashchange', ()=>{
+  const i=bookFromHash(); if (i==null || mode!=='idle') return;
+  const sp=shelf.querySelector(`.spine.real[data-b="${i}"]:not(.gone)`);
+  if (sp) fetchAndEat(sp); else openFromLink(i);
+});
+async function copyDreamLink(b){
+  const url=bookLink(b);
+  try {
+    await Promise.race([navigator.clipboard.writeText(url), new Promise((_,rej)=>setTimeout(rej,1500))]);
+    flash('이 꿈의 링크를 복사했어요');
+  } catch(e){ flash(url); }
 }
 function esc(s){ return s.replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function renderDream(b){
@@ -481,15 +555,17 @@ function renderDream(b){
     <div class="tags rv">${b.tags.map(t=>`<span>#${esc(t)}</span>`).join('')}</div>
     <div class="actions rv">
       ${b.blog?`<a href="${esc(b.blog)}" target="_blank" rel="noopener">블로그 서평 읽기</a>`:''}
+      <button id="share" type="button" class="ghost">이 꿈 링크 복사</button>
       <button id="wake" type="button">꿈에서 깨기</button>
     </div>`;
   dreamInner.querySelector('#wake').addEventListener('click', wake);
+  dreamInner.querySelector('#share').addEventListener('click', ()=>copyDreamLink(b));
 }
 
 /* 꿈에서 깨기 */
 async function wake(){
   if (mode!=='dream') return;
-  mode='waking'; stopZz();
+  mode='waking'; stopZz(); if (revealIO) revealIO.disconnect(); clearDreamHash();
   const fade=dream.animate([{opacity:1},{opacity:0}],{duration:800/SPD,easing:'ease',fill:'forwards'});
   if (zoomAnim){ zoomAnim.cancel(); }
   const back=stage.animate([{transform:'scale(3)',filter:'blur(10px)'},{transform:'scale(1)',filter:'blur(0px)'}],{duration:1100/SPD,easing:'cubic-bezier(.4,0,.2,1)'});
