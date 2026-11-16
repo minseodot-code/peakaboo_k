@@ -26,6 +26,75 @@ function loadBooks(){
 }
 function bookColor(b){ return b && typeof b.color==='string' && CSS.supports('color', b.color) ? b.color : null; }
 const eatenBooks = new Set();  // 꿈에서 이미 보여준 실제 책 번호
+/* 먹은 책 더미: 꿈에서 깰 때마다 그 책이 입구 근처 바닥에 쌓임. 이 브라우저에 기억돼서 다음에 와도 남아 있음.
+   더미의 책을 누르면 여우가 그 책을 다시 꿈꿈 */
+const PILE_KEY='peakaboo-pile', PILE={x:300, z:-90}, PILE_PER_STACK=12;
+let pile=[], lastDreamBook=null;
+const pileEl=document.createElement('div'); pileEl.id='pile'; pileEl.setAttribute('role','group'); pileEl.setAttribute('aria-label','여우가 먹은 책 더미');
+function loadPile(){
+  try { const slugs=JSON.parse(localStorage.getItem(PILE_KEY)||'[]');
+        pile=[...new Set(slugs.map(sl=>BOOKS.findIndex(b=>bookSlug(b)===sl)).filter(i=>i>=0))]; }
+  catch(e){ pile=[]; }
+}
+function savePile(){ try { localStorage.setItem(PILE_KEY, JSON.stringify(pile.map(i=>bookSlug(BOOKS[i])))); } catch(e){} }
+function pileBook(i,k){
+  const b=BOOKS[i], r=rng(k*131+7), el=document.createElement('button');
+  el.type='button'; el.className='pbook'; el.dataset.b=i; el.title=b.title;
+  el.setAttribute('aria-label',`${b.title} 다시 꿈꾸기`);
+  el.style.setProperty('--c', bookColor(b)||PALETTE[(i*5)%PALETTE.length]);
+  el.style.width=Math.round(100+r()*34)+'px'; el.style.height=Math.round(19+r()*7)+'px';
+  el.style.setProperty('--rot',(r()*7-3.5).toFixed(1)+'deg'); el.style.setProperty('--off',Math.round(r()*14-7)+'px');
+  return el;
+}
+function renderPile(){
+  pileEl.innerHTML=''; let tallest=0;
+  for (let s0=0; s0<pile.length; s0+=PILE_PER_STACK){
+    const st=document.createElement('div'); st.className='pstack'; let hsum=0;
+    pile.slice(s0,s0+PILE_PER_STACK).forEach((i,k)=>{ const el=pileBook(i,s0+k); hsum+=parseFloat(el.style.height); st.appendChild(el); });
+    tallest=Math.max(tallest,hsum); pileEl.appendChild(st);
+  }
+  // 라벨은 더미 위에 띄움 (바닥 아래로 내려가면 바닥 판에 가려짐)
+  const lab=document.createElement('div'); lab.className='plabel'; lab.style.bottom=(tallest+16)+'px';
+  lab.textContent=pile.length?`여우가 먹은 책 ${pile.length}권`:''; pileEl.appendChild(lab);
+}
+function placePile(){
+  const pz=PILE.z+cam;                       // 안쪽으로 들어가면 더미는 입구에 남아 뒤로 멀어짐
+  pileEl.style.display = (pz>520 || !pile.length) ? 'none' : '';
+  pileEl.style.transform=`translate3d(${PILE.x-150}px,${FLOOR-420}px,${pz}px)`;
+}
+async function addToPile(i){
+  if (i==null) return;
+  if (pile.includes(i)){                     // 이미 쌓인 책이면 그 책만 살짝 반짝
+    const el=pileEl.querySelector(`.pbook[data-b="${i}"]`);
+    if (el) el.animate([{filter:'brightness(1)'},{filter:'brightness(1.6)'},{filter:'brightness(1)'}],{duration:900});
+    return;
+  }
+  pile.push(i); savePile(); renderPile(); placePile();
+  const el=pileEl.querySelector(`.pbook[data-b="${i}"]`); if (!el) return;
+  const to=el.getBoundingClientRect(), from=headPoint();
+  el.style.visibility='hidden';
+  const fly=document.createElement('div'); fly.className='flybook';
+  fly.style.setProperty('--cover', getComputedStyle(el).getPropertyValue('--c'));
+  Object.assign(fly.style,{left:from.x+'px',top:from.y+'px',width:'26px',height:'34px'});
+  document.body.appendChild(fly);
+  await fly.animate([
+    {left:from.x+'px',top:from.y+'px',width:'26px',height:'34px',transform:'rotate(0deg)'},
+    {left:((from.x+to.left)/2)+'px',top:(Math.min(from.y,to.top)-90)+'px',width:'40px',height:'26px',transform:'rotate(-160deg)',offset:.55},
+    {left:to.left+'px',top:to.top+'px',width:to.width+'px',height:to.height+'px',transform:'rotate(-360deg)'}
+  ],{duration:900/SPD,easing:'cubic-bezier(.3,.7,.4,1)',fill:'forwards'}).finished;
+  fly.remove(); el.style.visibility='';
+  el.animate([{transform:'translateX(var(--off)) translateY(-6px) rotate(var(--rot))'},{transform:'translateX(var(--off)) rotate(var(--rot))'}],{duration:260,easing:'cubic-bezier(.3,1.6,.6,1)'});
+}
+/* 더미의 책을 누르면: 여우가 자리로 가서 잠들고 그 책의 꿈을 다시 꿈 */
+async function dreamAgain(i){
+  if (mode!=='idle') return;
+  mode='busy'; run++; stopMove(); hideHint();
+  setPose('walk'); await moveTo(SEAT.x, SEAT.z, 170);
+  face('left'); setPose('sit'); await wait(500);
+  setPose('sleep'); startZz(); await wait(1200);
+  await enterDream(BOOKS[i]);
+}
+pileEl.addEventListener('click', e=>{ const b=e.target.closest('.pbook'); if (b) dreamAgain(+b.dataset.b); });
 /* 장식용 책을 누르면: 아직 안 먹은 실제 책 중 하나 (다 먹었으면 전체에서) */
 function pickUneaten(){
   const all=BOOKS.map((_,i)=>i), left=all.filter(i=>!eatenBooks.has(i)), pool=left.length?left:all;
@@ -139,7 +208,7 @@ function face(dir){ facing=dir; inner.style.transform = dir==='left' ? 'none' : 
    dx·dy(선택): 그림 위치 보정(px). dx +는 여우가 보는 반대쪽(꼬리 쪽), dy +는 아래
    URL 끝에 #debug 를 붙이면 조정 패널로 눈으로 보며 맞추고 값을 복사할 수 있어요 (js/debug.js) */
 const POSES = {
-  crawl: { f:['crawl_1','crawl_2','crawl_3','crawl_4'], stride:22, bob:2, h:135, sh:'58%' },
+  crawl: { f:['crawl_1','crawl_2','crawl_3','crawl_4'], stride:30, bob:2, h:135, sh:'58%' },
   // 미드저니 영상에서 뽑은 걸음 한 주기(16프레임). 예전 4장짜리로 돌아가려면 f를 ['walk_1','walk_2','walk_3','walk_4'], stride:30, bob:4, bobPer:1 로
   walk:  { f:Array.from({length:16},(_,i)=>'walkv_'+String(i+1).padStart(2,'0')), stride:11, bob:1.5, bobPer:8, h:255, sh:'27%', carry:[.11,.24] },
   stand: { f:['stand'],     h:262, sh:'21%' },
@@ -219,20 +288,20 @@ function mouthRect(){
 }
 const ACC=520;            // 가속도 (px/s²): 출발·정지가 부드러워짐
 let vel=0, mover=null;
-function advance(tx,tz,max,dt){
+function advance(tx,tz,max,dt,acc=ACC){
   const dx=tx-x, dz=tz-z, d=Math.hypot(dx,dz);
-  if (d<0.5){ vel=Math.max(0,vel-ACC*dt); return {moved:0,left:d}; }
-  const want=Math.min(max, Math.max(18, Math.sqrt(2*ACC*d)));
-  vel+=Math.sign(want-vel)*Math.min(Math.abs(want-vel), ACC*dt);
+  if (d<0.5){ vel=Math.max(0,vel-acc*dt); return {moved:0,left:d}; }
+  const want=Math.min(max, Math.max(18, Math.sqrt(2*acc*d)));
+  vel+=Math.sign(want-vel)*Math.min(Math.abs(want-vel), acc*dt);
   const step=Math.min(d, vel*dt*SPD);
   const nx=x+dx/d*step, nz=z+dz/d*step;
   const ds=sx(nx,nz)-sx(x,z); if (Math.abs(ds)>.35) face(ds<0?'left':'right');
   place(nx,nz); stepFrames(step);
   return {moved:step,left:d-step};
 }
-function moveTo(tx,tz,speed){
+function moveTo(tx,tz,speed,acc){
   if (Math.hypot(tx-x,tz-z)<2) return Promise.resolve();
-  return new Promise(res=>{ mover={tx,tz,speed,res}; });
+  return new Promise(res=>{ mover={tx,tz,speed,acc,res}; });
 }
 function stopMove(){ if (mover){ const r=mover.res; mover=null; vel=0; r(); } }
 function fitRoom(){ document.documentElement.style.setProperty('--k', Math.min(innerWidth/1280, innerHeight/760).toFixed(3)); }
@@ -284,7 +353,7 @@ const floorEl=document.getElementById('floorP');
 function applyCam(){
   shelf.style.transform=`translateX(${-cam}px) translateZ(${DEPTH}px)`;
   floorEl.style.backgroundPosition=`0 0, 0 0, 0 ${-cam}px, 0 0`;
-  ensureSegs();
+  ensureSegs(); placePile();
 }
 function spineZ(sp){
   const k=+sp.parentNode.parentNode.dataset.k;
@@ -296,8 +365,11 @@ async function intro(){
   const linked=bookFromHash();
   if (linked!=null){ openFromLink(linked); return; }
   setPose('crawl'); face('left'); place(760,-180);
-  await wait(500);
-  await moveTo(FX, -180, 170);
+  await wait(150);
+  // 책장 앞까지 약 3초 + 일어서기 0.5초 = 등장에서 서기까지 약 4초. 가속도 A로 출발·정지하면서 T초에 도착하는 최고 속도를 계산
+  const d=Math.abs(760-FX), T=2.7, A=1400;
+  const vmax=(A*T - Math.sqrt(Math.max(0,(A*T)**2-4*A*d)))/2;
+  await moveTo(FX, -180, vmax, A);
   setPose('stand');
   await bob.animate([{transform:'translateY(8px)'},{transform:'translateY(-8px)'},{transform:'none'}],{duration:520/SPD,easing:'ease-out'}).finished;
   mode='idle'; showHint();
@@ -343,7 +415,7 @@ function tick(t){
   requestAnimationFrame(tick);
   const dt=Math.min(.05,(t-lastT)/1000||0); lastT=t;
   if (mover){
-    const r=advance(mover.tx,mover.tz,mover.speed,dt);
+    const r=advance(mover.tx,mover.tz,mover.speed,dt,mover.acc);
     if (r.left<0.6){ place(mover.tx,mover.tz); const res=mover.res; mover=null; vel=0; res(); }
     return;
   }
@@ -495,7 +567,7 @@ function stopZz(){ clearInterval(zzTimer); zzTimer=null; }
 /* 꿈으로 들어가기 */
 let dreamSeq=0;               // 꿈마다 번호: 도중에 깨면 이전 꿈의 남은 연출을 멈추는 데 씀
 async function enterDream(book){
-  mode='dream'; eaten++;
+  mode='dream'; eaten++; lastDreamBook=BOOKS.indexOf(book);
   const my=++dreamSeq;
   const hp=headPoint(); const cx=hp.x, cy=hp.y;
   renderDream(book); tintDream(book); setDreamHash(book);
@@ -621,6 +693,7 @@ async function wake(){
   await wait(300);
   setPose('stand');
   await bob.animate([{transform:'scaleY(.94)'},{transform:'scaleY(1.06)'},{transform:'none'}],{duration:600/SPD}).finished;
+  await addToPile(lastDreamBook);
   mode='idle'; showHint(); resumeIdle();
 }
 
@@ -650,7 +723,7 @@ document.documentElement.addEventListener('pointerleave', ()=>{ pointerIn=false;
 addEventListener('resize', fitRoom);
 
 /* 시작 */
-function start(){ if (held.parentNode!==bob) bob.appendChild(held); fitRoom(); Promise.all([loadBooks(), preloadFox()]).then(()=>{ applyCam(); intro(); loadDebug(); }); }
+function start(){ if (held.parentNode!==bob) bob.appendChild(held); fitRoom(); Promise.all([loadBooks(), preloadFox()]).then(()=>{ fox.parentNode.appendChild(pileEl); loadPile(); renderPile(); applyCam(); intro(); loadDebug(); }); }
 /* #debug 일 때만 조정 패널 스크립트를 불러옴 (없으면 패널 코드 자체가 로드되지 않음) */
 function loadDebug(){
   if (location.hash!=='#debug') return;
