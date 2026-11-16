@@ -114,7 +114,8 @@ const stage=$('#stage'), fox=$('#fox'), bob=$('#foxBob'), inner=$('#foxInner'),
       hint=$('#hint'), dream=$('#dream'), ink=$('#ink'), dreamInner=$('#dreamInner'), toast=$('#toast');
 const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const SPD = RM ? 3 : 1;
-const PALETTE=['#8C6A5A','#A98F6B','#6F7F78','#9AA4AE','#B98B7A','#7B6F8C','#C2A57A','#5F6B73','#A7826A','#8E9C85','#B4A08A','#6E5B4E'];
+// 여우 그림과 같은 수채 톤: 회청·모래·크림·흐린 장미·세이지·옅은 갈색
+const PALETTE=['#8FA2B3','#7D8FA0','#A9B6C0','#C9A46A','#D6BF95','#E2D3B4','#C79A8E','#B48478','#A4AE92','#8E9C85','#9C7C5E','#B39573','#7F9894','#A7A196'];
 const BEHAV={crawl:'walking',walk:'walking',reach:'reaching',reachSit:'reaching',eat:'chewing',sleep:'sleeping',rest:'resting'};
 
 /* 방 좌표 (px, z는 화면 쪽이 +) */
@@ -251,7 +252,10 @@ function makeSeg(k){
       if (k===0 && real<BOOKS.length){   // 맨 앞 칸: 실제 책을 순서대로
         sp.dataset.b=real; sp.classList.add('real'); bg=bookColor(BOOKS[real])||bg; real++;
       }
-      sp.style.background=bg;
+      sp.style.setProperty('--c',bg); sp.dataset.c=bg;
+      sp.style.setProperty('--wy', Math.round(15+r()*60)+'%');
+      sp.style.setProperty('--wp', Math.round(r()*300)+'px '+Math.round(r()*300)+'px');
+      if (r()<.22) sp.classList.add('lbl');
       sp.style.setProperty('--band', Math.round(8+r()*18)+'%');
       if (goneSet.has(id)) sp.classList.add('gone');
       row.appendChild(sp); n++;
@@ -369,7 +373,7 @@ async function fetchAndEat(chosen){
   }
   const bi=spine.dataset.b!=null ? +spine.dataset.b : pickUneaten();
   const book=BOOKS[bi]; eatenBooks.add(bi);
-  const color=spine.style.background;
+  const color=spine.dataset.c||spine.style.backgroundColor;
   spine.classList.add('picked');
 
   if (Math.abs(x-FX)>30){ setPose('walk'); await moveTo(FX, Math.min(z,ZFRONT), 130); }
