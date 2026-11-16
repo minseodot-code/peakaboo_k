@@ -523,7 +523,8 @@ function tintDream(b){
 
 /* 책마다 공유용 주소: #book-제목 (띄어쓰기는 -) */
 function bookSlug(b){ return String(b.title||'').normalize('NFC').trim().replace(/\s+/g,'-'); }
-function bookLink(b){ return location.origin+location.pathname+location.search+'#book-'+encodeURIComponent(bookSlug(b)); }
+const SITE_URL='https://peakabook.vercel.app/';   // 운영 주소: 공유 링크는 미리보기·로컬에서 복사해도 항상 이 주소로
+function bookLink(b){ return SITE_URL+'#book-'+encodeURIComponent(bookSlug(b)); }
 function bookFromHash(){
   const h=location.hash; if (!h.startsWith('#book-')) return null;
   let want; try { want=decodeURIComponent(h.slice(6)).normalize('NFC'); } catch(e){ return null; }

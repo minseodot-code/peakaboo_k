@@ -36,6 +36,7 @@
 
 ## 첫 화면·공유
 - `#loader`: 글꼴(최대 2.5초)·책·여우 그림을 동시에 불러오는 동안 표시, 끝나면 `hideLoader()`
+- 운영 주소: https://peakabook.vercel.app — og:url·og:image·canonical(`index.html`)과 꿈 링크 복사(`SITE_URL`, `js/main.js`)가 이 주소를 씀. 주소가 바뀌면 두 곳을 함께 고칠 것
 - 공유 미리보기: `index.html`의 og 태그, 이미지 `assets/og.jpg`(1200x630), 아이콘 `assets/icon-192.png`·`icon-180.png`
 
 ## 규칙
