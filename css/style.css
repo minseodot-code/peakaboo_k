@@ -16,13 +16,15 @@ html,body{margin:0;height:100%;overflow:hidden;background:#0b0b0b;font-family:'G
     radial-gradient(ellipse 80% 30% at 50% 100%, rgba(255,240,220,.05), transparent 70%),
     #0b0b0b;
   will-change:transform,filter;
+  touch-action:none;                 /* 손가락 끌기를 브라우저 스크롤·확대 대신 방 이동에 씀 */
+  -webkit-tap-highlight-color:transparent;
 }
 #label{position:fixed;top:18px;left:22px;color:#6b6460;font-size:12px;letter-spacing:.08em;z-index:3}
 #note{position:fixed;bottom:14px;right:18px;color:#4d4844;font-size:11px;z-index:3}
 
 /* 방 (3D) */
-#viewport{position:absolute;inset:0;perspective:1100px;perspective-origin:50% 42%;overflow:hidden}
-#world{position:absolute;left:50%;top:50%;width:0;height:0;transform-style:preserve-3d;transform:scale(var(--k,1))}
+#viewport{position:absolute;inset:0;perspective:1100px;perspective-origin:var(--ox,50%) 42%;overflow:hidden}
+#world{position:absolute;left:var(--ox,50%);top:50%;width:0;height:0;transform-style:preserve-3d;transform:scale(var(--k,1))}
 .plane{position:absolute;left:0;top:0;transform-origin:0 0;transform-style:preserve-3d}
 #wallL{width:3600px;height:800px;transform:translate3d(-600px,-500px,300px) rotateY(90deg);
   background:linear-gradient(90deg,#1d1713 0%,#120e0b 30%,#050404 60%,#030303 100%)}
@@ -30,6 +32,12 @@ html,body{margin:0;height:100%;overflow:hidden;background:#0b0b0b;font-family:'G
   background:
     linear-gradient(180deg,rgba(0,0,0,0) 0%,rgba(0,0,0,.6) 28%,#050404 55%,#030303 100%),
     radial-gradient(ellipse 40% 22% at 22% 14%,rgba(255,222,170,.09),transparent 70%),
+    repeating-linear-gradient(180deg,rgba(0,0,0,0) 0 238px,rgba(0,0,0,.45) 238px 240px),
+    repeating-linear-gradient(90deg,#1b1511 0 118px,#120e0b 118px 120px)}
+/* 바닥 앞쪽 연장 (세로 화면에서 바닥이 화면 아래 끝까지 이어지게) */
+#floorNear{width:1200px;height:700px;transform:translate3d(-600px,300px,1000px) rotateX(-90deg);
+  background:
+    radial-gradient(ellipse 50% 60% at 22% 100%,rgba(255,222,170,.06),transparent 70%),
     repeating-linear-gradient(180deg,rgba(0,0,0,0) 0 238px,rgba(0,0,0,.45) 238px 240px),
     repeating-linear-gradient(90deg,#1b1511 0 118px,#120e0b 118px 120px)}
 #ceilP{width:1200px;height:3600px;transform:translate3d(-600px,-500px,300px) rotateX(-90deg);
@@ -122,8 +130,21 @@ svg .head{transform-box:fill-box;transform-origin:50% 100%}
 
 #hint{
   position:fixed;left:50%;bottom:3.2vh;transform:translateX(-50%);
-  color:#a59d92;font-size:14px;letter-spacing:.04em;opacity:0;transition:opacity .8s;z-index:3;white-space:nowrap
+  color:#a59d92;font-size:14px;letter-spacing:.04em;opacity:0;transition:opacity .8s;z-index:3;white-space:nowrap;
+  pointer-events:none
 }
+@media (max-width:700px){ #hint{white-space:normal;width:calc(100% - 32px);text-align:center;font-size:13px;line-height:1.6;bottom:calc(14px + env(safe-area-inset-bottom))} }
+
+/* 첫 방문 로딩 표시: 검은 화면에 작은 점 세 개 */
+#loader{position:fixed;inset:0;z-index:70;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  background:#0b0b0b;color:#6b6460;font-size:12px;letter-spacing:.12em;transition:opacity .6s ease}
+#loader.done{opacity:0;pointer-events:none}
+#loader .dots{display:flex;gap:7px}
+#loader .dots i{width:5px;height:5px;border-radius:50%;background:#c9a877;opacity:.25;animation:ld 1.2s ease-in-out infinite}
+#loader .dots i:nth-child(2){animation-delay:.2s}
+#loader .dots i:nth-child(3){animation-delay:.4s}
+@keyframes ld{40%{opacity:.9}}
+@media (prefers-reduced-motion:reduce){ #loader .dots i{animation:none;opacity:.6} }
 #hint.show{opacity:1}
 
 /* ---------- 꿈 ---------- */

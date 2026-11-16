@@ -22,6 +22,8 @@
 - 꿈 주소: `#book-제목`(공백→`-`, `bookSlug()`). 그 주소로 들어오면 `intro()` 대신 `openFromLink()`로 바로 꿈. 구절은 `revealOnScroll()`이 화면에 들어올 때 하나씩 띄움. 물감 색은 `tintDream()`이 책 color로 `--t1/--t3` 지정
 
 ## 좌표
+- 화면 구도: `fitRoom()`이 축척 `K`와 소실점 가로 위치 `OX`를 정함. 세로(휴대폰) 화면은 `PORTRAIT_W` 기준으로 책장 쪽을 크게 보여 주고 `ZFRONT`를 480까지 열어 줌. `screenToTarget()`도 같은 `K`, `OX`를 씀
+- 터치: 탭하면 `tapTarget`으로 걸어감, 바닥에 대고 위로 끌면 `cam` 증가(안쪽), 아래로 끌면 입구 쪽. 마우스는 기존처럼 커서를 따라감
 - 3D 방 단위는 px. z는 화면 쪽이 +. 상수: `P, ZN, WX, FLOOR, DEPTH, SH_START, SEG, ZDEEP, ZFRONT`
 - 여우 위치는 `place(x, z)`, 이동은 `moveTo(x, z, speed)` (가속·감속 포함), 매 프레임 처리는 `tick()`
 
@@ -31,6 +33,11 @@
 - 새 프레임을 추가하면 `assets/fox/`에 넣고 `POSES`의 `f` 배열에만 이름을 추가하면 됨
 - `dx`, `dy`(선택): 그림 위치 보정(px). dx +는 꼬리 쪽, dy +는 아래. `applyLook()`이 적용
 - 크기·위치 맞추기: URL 끝에 `#debug` → 조정 패널(`js/debug.js`, #debug일 때만 로드). "값 복사"한 줄을 `POSES`의 같은 이름 줄과 바꾸면 됨
+
+## 첫 화면·공유
+- `#loader`: 글꼴(최대 2.5초)·책·여우 그림을 동시에 불러오는 동안 표시, 끝나면 `hideLoader()`
+- 운영 주소: https://peakabook.vercel.app — og:url·og:image·canonical(`index.html`)과 꿈 링크 복사(`SITE_URL`, `js/main.js`)가 이 주소를 씀. 주소가 바뀌면 두 곳을 함께 고칠 것
+- 공유 미리보기: `index.html`의 og 태그, 이미지 `assets/og.jpg`(1200x630), 아이콘 `assets/icon-192.png`·`icon-180.png`
 
 ## 규칙
 - 동작을 바꿀 때 커서 따라가기, 클릭한 책 꺼내기, 꿈 전환이 깨지지 않는지 항상 확인
