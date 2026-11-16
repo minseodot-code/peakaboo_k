@@ -121,7 +121,7 @@ const BEHAV={crawl:'walking',walk:'walking',reach:'reaching',reachSit:'reaching'
 const P=1100, ZN=300, WX=-600, FLOOR=300, DEPTH=72, SH_START=250, SH_LEN=1350, FOXS=320;
 const FX = WX + DEPTH + 125;          // 책장 앞을 걷는 x
 const SEG = 1300;                     // 책장 한 칸(세그먼트) 길이
-const ZDEEP = -600, ZFRONT = 130;     // 여우가 걸을 수 있는 앞뒤 한계
+const ZDEEP = -600; let ZFRONT = 130;  // 여우가 걸을 수 있는 앞뒤 한계 (세로 화면에서는 fitRoom()이 더 앞까지 열어 줌)
 let cam = 0;                          // 방 안쪽으로 들어간 거리
 const SEAT = {x:-90, z:60};           // 책 먹는 자리
 let x=0, z=0, facing='left', pose='crawl', mode='intro', run=0, curAnim=null, pending=false, eaten=0, zzTimer=null, zoomAnim=null, inkAnim=null;
@@ -222,7 +222,20 @@ function moveTo(tx,tz,speed){
   return new Promise(res=>{ mover={tx,tz,speed,res}; });
 }
 function stopMove(){ if (mover){ const r=mover.res; mover=null; vel=0; r(); } }
-function fitRoom(){ document.documentElement.style.setProperty('--k', Math.min(innerWidth/1280, innerHeight/760).toFixed(3)); }
+/* 방 구도: 가로 화면은 방 전체를 가운데에, 세로(휴대폰) 화면은 책장 쪽을 크게 보여줌
+   K = 방 축척, OX = 소실점(방 중심)의 가로 위치 비율. screenToTarget()도 같은 값을 씀 */
+let K=1, OX=.5;
+const PORTRAIT_W=860;   // 세로 화면에서 화면 너비에 담을 방 너비(px). 작을수록 책장·여우가 커짐
+function fitRoom(){
+  const portrait = innerHeight > innerWidth*1.15 && innerWidth < 820;
+  if (portrait){
+    K = Math.min(innerWidth/PORTRAIT_W, innerHeight/760);
+    OX = Math.min(.9, (14 + 600*K)/innerWidth);   // 책장 앞 모서리가 화면 왼쪽 끝 근처에 오도록
+    ZFRONT = 480;   // 여우가 작게 보이니 화면 아래쪽 바닥까지 걸어올 수 있게
+  } else { K = Math.min(innerWidth/1280, innerHeight/760); OX = .5; ZFRONT = 130; }
+  const st=document.documentElement.style;
+  st.setProperty('--k', K.toFixed(3)); st.setProperty('--ox', (OX*100).toFixed(2)+'%');
+}
 function showHint(){ hint.classList.add('show'); }
 function hideHint(){ hint.classList.remove('show'); }
 function flash(msg){ toast.textContent=msg; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'),1800); }
@@ -264,10 +277,11 @@ function ensureSegs(){
   for (const [k,el] of segs) if (k<kmin||k>kmax){ el.remove(); segs.delete(k); }
   for (let k=kmin;k<=kmax;k++) if (!segs.has(k)) makeSeg(k);
 }
-const floorEl=document.getElementById('floorP');
+const floorEl=document.getElementById('floorP'), floorNear=document.getElementById('floorNear');
 function applyCam(){
   shelf.style.transform=`translateX(${-cam}px) translateZ(${DEPTH}px)`;
   floorEl.style.backgroundPosition=`0 0, 0 0, 0 ${-cam}px, 0 0`;
+  floorNear.style.backgroundPosition=`0 0, 0 ${-19-cam}px, 0 0`;   // 본 바닥과 타일 줄이 이어지게 (판 길이 700 기준 위상)
   ensureSegs();
 }
 function spineZ(sp){
@@ -312,8 +326,7 @@ let reachKind='reach', reachSwapAt=0;  // 책장 앞에 멈춰 있는 동안 서
 function pickReach(t){ reachKind=Math.random()<.35?'reachSit':'reach'; reachSwapAt=t+rand(3500,7000); }
 function startFollow(){ following=true; run++; stopMove(); pointerMovedAt=performance.now(); }  // 꿈에서 깬 직후 바로 쉬지 않도록 시계를 새로 시작
 function screenToTarget(cx,cy){
-  const K=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--k'))||1;
-  const ox=innerWidth/2, oy=innerHeight*0.42, off=innerHeight*0.08;
+  const ox=innerWidth*OX, oy=innerHeight*0.42, off=innerHeight*0.08;
   const fw=(cx-ox)/(K*(WX+DEPTH));
   if (fw>0){
     const yTop=oy+(K*-260+off)*fw, yBot=oy+(K*FLOOR+off)*fw;
@@ -323,6 +336,8 @@ function screenToTarget(cx,cy){
   if (ff<=0.02) return {x:null, z:-1e5, onShelf:false};
   return {x:(cx-ox)/(ff*K), z:P-P/ff, onShelf:false};
 }
+/* 여우가 화면 오른쪽 밖으로 나가지 않는 x 한계 (좁은 화면용) */
+function maxFoxX(zz){ return Math.min(470, (innerWidth-70-innerWidth*OX)/K*(P-zz)/P); }
 function tick(t){
   requestAnimationFrame(tick);
   const dt=Math.min(.05,(t-lastT)/1000||0); lastT=t;
@@ -332,12 +347,13 @@ function tick(t){
     return;
   }
   if (mode!=='idle' || !following) return;
-  const g=screenToTarget(px,py);
-  let tx=g.x==null?x:Math.min(Math.max(g.x,FX),470), tz=g.z, scroll=0;
-  if (tz<ZDEEP){ scroll=Math.min(1,(ZDEEP-tz)/450); tz=ZDEEP; }
+  const g=touchMode ? (tapTarget||{x:null,z:z,onShelf:false}) : screenToTarget(px,py);
+  let tx=g.x==null?x:Math.min(Math.max(g.x,FX),maxFoxX(Math.min(Math.max(g.z,ZDEEP),ZFRONT))), tz=g.z, scroll=0;
+  if (tz<ZDEEP){ if (!touchMode) scroll=Math.min(1,(ZDEEP-tz)/450); tz=ZDEEP; }
+  else if (touchMode){ tz=Math.min(tz,ZFRONT); }
   else if (tz>ZFRONT){ if (cam>0 && tz>ZFRONT+120) scroll=-Math.min(1,(tz-ZFRONT-120)/250); tz=ZFRONT; }
   const r=advance(tx,tz,170,dt);
-  let moving=r.moved>0.05;
+  let moving=r.moved>0.05 || (drag && drag.on);
   if (scroll && (scroll>0 || cam>0)){
     const dcam=scroll*280*SPD*dt; cam=Math.max(0,cam+dcam); applyCam();
     if (r.left<=3){ face(scroll>0?'right':'left'); stepFrames(Math.abs(dcam)); }
@@ -358,7 +374,7 @@ requestAnimationFrame(tick);
 
 /* 클릭: 근처 책 꺼내기 → 앉기 → 펼치기 → 넘기기 → 먹기 → 잠 → 꿈 */
 async function fetchAndEat(chosen){
-  mode='busy'; run++; stopMove(); hideHint();
+  mode='busy'; run++; stopMove(); hideHint(); tapTarget=null;
   let spine=chosen;
   if (!spine){
     const all=[...shelf.querySelectorAll('.spine:not(.gone)')];
@@ -591,6 +607,7 @@ function pickSpine(e){
   return best;
 }
 function onShelf(e){
+  if (performance.now()-justDragged<400) return;   // 끌기를 끝낸 손가락이 책장 위였을 때 클릭으로 치지 않음
   const sp=pickSpine(e);
   if (mode==='idle') fetchAndEat(sp);
   else if (mode==='intro'){ pending=sp||true; }
@@ -598,14 +615,66 @@ function onShelf(e){
 shelf.addEventListener('click', onShelf);
 shelf.addEventListener('keydown', e=>{ if (e.key==='Enter'||e.key===' '){ e.preventDefault(); onShelf(); } });
 addEventListener('keydown', e=>{ if (e.key==='Escape' && mode==='dream') wake(); });
-addEventListener('pointermove', e=>{ px=e.clientX; py=e.clientY; pointerIn=true; pointerMovedAt=performance.now(); if (mode==='idle' && !following) startFollow(); });
-addEventListener('pointerdown', e=>{ px=e.clientX; py=e.clientY; pointerIn=true; pointerMovedAt=performance.now(); if (mode==='idle' && !following) startFollow(); });
-document.documentElement.addEventListener('pointerleave', ()=>{ pointerIn=false; if (following){ following=false; if (mode==='idle') idle(); } });
+/* 마우스: 커서를 따라감 / 터치: 탭한 곳으로 걸어감, 바닥에 대고 위로 끌면 안쪽, 아래로 끌면 입구 쪽 */
+let touchMode=false, tapTarget=null, drag=null, justDragged=0;
+const DRAG_SLOP=10, DRAG_GAIN=1.6;
+function isTouch(e){ return e.pointerType==='touch'; }
+addEventListener('pointerdown', e=>{
+  pointerIn=true; pointerMovedAt=performance.now();
+  if (isTouch(e)){ touchMode=true; drag={x0:e.clientX,y0:e.clientY,y:e.clientY,on:false}; return; }
+  touchMode=false; px=e.clientX; py=e.clientY;
+  if (mode==='idle' && !following) startFollow();
+});
+addEventListener('pointermove', e=>{
+  pointerMovedAt=performance.now();
+  if (isTouch(e)){
+    if (!drag) return;
+    if (!drag.on && Math.hypot(e.clientX-drag.x0, e.clientY-drag.y0)>DRAG_SLOP) drag.on=true;
+    if (drag.on && mode==='idle'){
+      const d=(drag.y-e.clientY)*DRAG_GAIN/K;           // 위로 끌면 +
+      const next=Math.max(0,cam+d), moved=next-cam;
+      if (moved){
+        cam=next; applyCam();
+        if (!following) startFollow();
+        tapTarget={x:null,z:z,onShelf:false};             // 끄는 동안은 제자리에서 걷는 모습
+        if (pose!=='walk') setPose('walk');
+        face(moved>0?'right':'left'); stepFrames(Math.abs(moved));
+      }
+    }
+    drag.y=e.clientY; return;
+  }
+  touchMode=false; px=e.clientX; py=e.clientY; pointerIn=true;
+  if (mode==='idle' && !following) startFollow();
+});
+function endTouch(e){
+  if (!isTouch(e) || !drag) return;
+  if (drag.on) justDragged=performance.now();
+  else if (mode==='idle'){                              // 탭: 그 자리로 걸어감 (책장을 탭하면 click이 책 꺼내기를 맡음)
+    const g=screenToTarget(e.clientX,e.clientY);
+    tapTarget={x:g.x, z:Math.max(ZDEEP,Math.min(ZFRONT,g.z)), onShelf:g.onShelf};
+    if (!following) startFollow();
+  }
+  drag=null;
+}
+addEventListener('pointerup', endTouch);
+addEventListener('pointercancel', e=>{ if (isTouch(e)) drag=null; });
+document.documentElement.addEventListener('pointerleave', e=>{
+  if (isTouch(e)) return;                                // 손가락을 떼면 생기는 leave는 무시 (탭한 자리에 머묾)
+  pointerIn=false; if (following){ following=false; if (mode==='idle') idle(); }
+});
 
 addEventListener('resize', fitRoom);
+if (matchMedia('(hover: none) and (pointer: coarse)').matches)
+  hint.textContent='바닥을 누르면 여우가 걸어가요 · 위로 끌면 더 깊이 들어가요 · 책을 누르면 먹어요';
 
 /* 시작 */
-function start(){ fitRoom(); Promise.all([loadBooks(), preloadFox()]).then(()=>{ applyCam(); intro(); loadDebug(); }); }
+const loader=document.getElementById('loader');
+function hideLoader(){ if (!loader) return; loader.classList.add('done'); setTimeout(()=>loader.remove(), 700); }
+function fontsReady(){   // 글꼴이 늦어도 2.5초 넘게 기다리지 않음
+  if (!(document.fonts && document.fonts.ready)) return Promise.resolve();
+  return Promise.race([document.fonts.ready, new Promise(r=>setTimeout(r,2500))]);
+}
+function start(){ fitRoom(); Promise.all([fontsReady(), loadBooks(), preloadFox()]).then(()=>{ hideLoader(); applyCam(); intro(); loadDebug(); }); }
 /* #debug 일 때만 조정 패널 스크립트를 불러옴 (없으면 패널 코드 자체가 로드되지 않음) */
 function loadDebug(){
   if (location.hash!=='#debug') return;
@@ -613,4 +682,4 @@ function loadDebug(){
   const sc=document.createElement('script'); sc.src='js/debug.js'; document.body.appendChild(sc);
 }
 addEventListener('hashchange', ()=>{ if (location.hash==='#debug') loadDebug(); else if (window.FoxDebug) FoxDebug.hide(); });
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+start();

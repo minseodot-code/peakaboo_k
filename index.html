@@ -3,13 +3,29 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>밑줄 먹는 여우 · 프로토타입</title>
+<title>밑줄 먹는 여우</title>
+<meta name="description" content="어두운 서재의 티벳여우가 책을 꺼내 먹고 잠들면, 그 책에 밑줄 친 구절이 꿈속에서 펼쳐지는 독서 아카이브.">
+<meta name="theme-color" content="#0b0b0b">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="밑줄 먹는 여우">
+<meta property="og:title" content="밑줄 먹는 여우">
+<meta property="og:description" content="여우가 책을 먹고 잠들면, 밑줄 친 구절이 꿈속에서 펼쳐져요.">
+<meta property="og:image" content="/assets/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="어두운 서재에서 책을 펼쳐 든 티벳여우">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" href="/assets/icon-192.png">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 
 </head>
 <body>
+<div id="loader" role="status"><div class="dots" aria-hidden="true"><i></i><i></i><i></i></div><span>서재에 불을 켜는 중</span></div>
 <div id="stage">
   <div id="label">밑줄 먹는 여우 · 프로토타입</div>
   <div id="viewport"><div id="world">
@@ -17,6 +33,7 @@
     <div class="plane" id="ceilP"></div>
     <div class="plane" id="wallR"></div>
     <div class="plane" id="floorP"></div>
+    <div class="plane" id="floorNear"></div>
     <div class="plane" id="wallL">
       <div id="wallShadow"></div>
       <div id="shelf" tabindex="0" role="button" aria-label="책장. 누르면 여우가 책을 한 권 꺼내 먹어요"><div id="sidePanel"></div></div>
