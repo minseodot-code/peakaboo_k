@@ -185,7 +185,7 @@ const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const SPD = RM ? 3 : 1;
 // 여우 그림과 같은 수채 톤: 회청·모래·크림·흐린 장미·세이지·옅은 갈색
 const PALETTE=['#8FA2B3','#7D8FA0','#A9B6C0','#C9A46A','#D6BF95','#E2D3B4','#C79A8E','#B48478','#A4AE92','#8E9C85','#9C7C5E','#B39573','#7F9894','#A7A196'];
-const BEHAV={crawl:'walking',walk:'walking',reach:'reaching',reachSit:'reaching',eat:'chewing',sleep:'sleeping',rest:'resting'};
+const BEHAV={crawl:'walking',walk:'walking',carry:'walking',reach:'reaching',reachSit:'reaching',eat:'chewing',sleep:'sleeping',rest:'resting'};
 
 /* 방 좌표 (px, z는 화면 쪽이 +) */
 const P=1100, ZN=300, WX=-600, FLOOR=300, DEPTH=72, SH_START=250, SH_LEN=1350, FOXS=320;
@@ -221,11 +221,28 @@ const POSES = {
   eat:   { f:['eat_1','eat_2'], fps:3, h:215, sh:'40%', mouth:[.44,.3] },
   sleep: { f:['sleep'],     h:118, sh:'74%', head:[.2,.3] }
 };
+/* 새 동그란 티벳여우 (작업 중). 주소 끝에 ?fox=round 를 붙이면 미리보기.
+   걷기는 프레임 대신 뒤뚱 걸음(waddle: 걸음마다 좌우 기울기 tilt°, 통통 튐 bob px, 살짝 눌림)으로 코드가 움직임.
+   아직 그림이 없는 포즈(앉아 읽기, 먹기, 잠)는 예전 여우 그림을 씀. 그림이 다 모이면 ROUND_DEFAULT를 true로 */
+const ROUND_DEFAULT=false;
+const ROUND = ROUND_DEFAULT || new URLSearchParams(location.search).get('fox')==='round';
+if (ROUND){
+  const waddle={ waddle:true, stride:24, bob:5, tilt:4, h:235, sh:'30%' };
+  Object.assign(POSES,{
+    stand: { f:['r_stand'], h:240, sh:'30%' },
+    walk:  { f:['r_walk'], ...waddle },
+    crawl: { f:['r_walk'], ...waddle, stride:40 },    // 등장도 뒤뚱 걸음으로 (빨리 오니 보폭 넓게)
+    carry: { f:['r_carry'], ...waddle, bookAt:[.29,.43] },   // 책을 품에 안고 걷기 (bookAt: 그림 속 책 위치 비율)
+    reach: { f:['r_stand'], h:240, sh:'30%' },        // 뒤적이기 그림 생기기 전 임시
+    rest:  { f:['r_stand'], h:240, sh:'30%' },
+  });
+}
 const SRC = n => `assets/fox/${n}.webp`;
 let imgOK=false, frameTimer=null;
+const imgCache={};
 function preloadFox(){
   const names=[...new Set(Object.values(POSES).flatMap(p=>p.f))];
-  return Promise.all(names.map(n=>new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>(im.decode?im.decode().catch(()=>{}):Promise.resolve()).then(res); im.onerror=rej; im.src=SRC(n); })))
+  return Promise.all(names.map(n=>new Promise((res,rej)=>{ const im=new Image(); imgCache[n]=im; im.onload=()=>(im.decode?im.decode().catch(()=>{}):Promise.resolve()).then(res); im.onerror=rej; im.src=SRC(n); })))
     .then(()=>{ imgOK=true; }).catch(()=>{ imgOK=false; });
 }
 let curImg=null, curFrame=0, stepDist=0;
@@ -264,9 +281,21 @@ function positionHeld(){
 function stepFrames(d){
   const c=POSES[pose]; if (!imgOK || !c || !c.stride || !curImg) return;
   stepDist+=d;
+  if (c.waddle){   // 뒤뚱 걸음: 한 걸음(stride)마다 좌우로 기울고, 발 디딜 때 살짝 눌렸다 뜰 때 튐
+    const ph=stepDist/c.stride*Math.PI, lift=Math.abs(Math.sin(ph));
+    bob.style.transform=`translateY(${(-lift*c.bob).toFixed(2)}px) rotate(${(Math.sin(ph)*c.tilt).toFixed(2)}deg) scale(${(1+.015*lift).toFixed(3)},${(1-.03*(1-lift)).toFixed(3)})`;
+    return;
+  }
   const i=Math.floor(stepDist/c.stride)%c.f.length;
   if (i!==curFrame){ curFrame=i; curImg.src=SRC(c.f[i]); }
   bob.style.transform=`translateY(${(-Math.abs(Math.sin(stepDist/(c.stride*(c.bobPer||1))*Math.PI))*c.bob).toFixed(2)}px)`;
+}
+function poseAnchor(name, frac){
+  const c=POSES[name], im=imgCache[c.f[0]]; const ar=im?(im.naturalWidth/im.naturalHeight):.8, w=c.h*ar;
+  let px=FOXS/2 - w/2 + (c.dx||0) + frac[0]*w; const py=FOXS - c.h + (c.dy||0) + frac[1]*c.h;
+  if (facing==='right') px=FOXS-px;
+  const r=fox.getBoundingClientRect();
+  return {x:r.left+px/FOXS*r.width, y:r.top+py/FOXS*r.height, k:r.width/FOXS};
 }
 function headPoint(){
   const img=curImg;
@@ -467,7 +496,21 @@ async function fetchAndEat(chosen){
   face('left'); setPose('reach'); await wait(950);
   let r=spine.getBoundingClientRect();
   held.style.setProperty('--cover', color);
-  if (imgOK){
+  if (imgOK && POSES.carry){
+    // 동그란 여우: 책이 포물선을 그리며 날아와 품에 안김 → 책 안은 그림(carry)으로 바뀜
+    held.className='';
+    const t=poseAnchor('carry', POSES.carry.bookAt), bw=34*t.k, bh=46*t.k;
+    const fly=document.createElement('div'); fly.className='flybook';
+    Object.assign(fly.style,{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px','--cover':color});
+    document.body.appendChild(fly); spine.classList.add('gone'); goneSet.add(spine.dataset.id);
+    await fly.animate([
+      {left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px',transform:'rotate(0deg)'},
+      {left:(r.left+(t.x-bw/2-r.left)*.5)+'px',top:(Math.min(r.top,t.y)-60)+'px',width:bw+'px',height:bh+'px',transform:'rotate(-30deg)',offset:.55},
+      {left:(t.x-bw/2)+'px',top:(t.y-bh/2)+'px',width:bw+'px',height:bh+'px',transform:'rotate(0deg)'}
+    ],{duration:800/SPD,easing:'cubic-bezier(.3,.7,.4,1)',fill:'forwards'}).finished;
+    setPose('carry'); fly.animate([{opacity:1},{opacity:0}],{duration:160}).finished.then(()=>fly.remove());
+    await wait(300);
+  } else if (imgOK){
     // 책장에서 빠져나온 책이 포물선을 그리며 여우 입으로 날아가 물림
     held.className='closed hidden'; positionHeld();
     const hr=held.querySelector('.cover').getBoundingClientRect();
@@ -494,7 +537,7 @@ async function fetchAndEat(chosen){
     held.className='closed';
   }
 
-  setPose('walk');
+  setPose(POSES.carry?'carry':'walk');
   await moveTo(FX, Math.max(z, -200), 150);
   await moveTo(SEAT.x, SEAT.z, 110);
 
