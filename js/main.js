@@ -234,7 +234,7 @@ if (ROUND){
   Object.assign(POSES,{
     stand: { f:['r_stand'], h:240, sh:'30%' },
     walk:  { f:['r_walk'], ...waddle },
-    crawl: { f:['r_walk'], ...waddle, stride:40 },    // 등장도 뒤뚱 걸음으로 (빨리 오니 보폭 넓게)
+    crawl: { f:['r_walk'], ...waddle, stride:24 },    // 등장도 뒤뚱 걸음으로 (천천히 오니 보폭 좁게)
     carry: { f:['r_carry'], ...waddle, bookAt:[.29,.43] },   // 책을 품에 안고 걷기 (bookAt: 그림 속 책 위치 비율)
     reach: { f:['r_reach'], h:258, sh:'30%' },         // 서서 한 앞발 뻗어 뒤적이기
     reachSit:{ f:['r_reach'], h:258, sh:'30%' },
@@ -431,7 +431,7 @@ async function intro(){
   setPose('crawl'); face('left'); place(760,-180);
   await wait(150);
   // 책장 앞까지 약 3초 + 일어서기 0.5초 = 등장에서 서기까지 약 4초. 가속도 A로 출발·정지하면서 T초에 도착하는 최고 속도를 계산
-  const d=Math.abs(760-FX), T=2.7, A=1400;
+  const d=Math.abs(760-FX), T=8, A=1400;
   const vmax=(A*T - Math.sqrt(Math.max(0,(A*T)**2-4*A*d)))/2;
   await moveTo(FX, -180, vmax, A);
   setPose('stand');
