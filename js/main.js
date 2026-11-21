@@ -199,7 +199,10 @@ const wait = ms => new Promise(r=>setTimeout(r, ms/SPD));
 const foxW = () => fox.offsetWidth;
 const rand = (a,b) => a + Math.random()*(b-a);
 
-function tf(px,pz){ return `translate3d(${px-FOXS/2}px,${FLOOR-FOXS}px,${pz}px)`; }
+// FOX_LIFT: 여우 판을 바닥에서 살짝 띄움. 바닥과 딱 붙어 있으면 브라우저의 3D 겹침 계산 때문에
+// 앞쪽(앉는 자리)에서 여우 아랫부분이 바닥에 가려지는 현상이 있어서
+const FOX_LIFT=20;
+function tf(px,pz){ return `translate3d(${px-FOXS/2}px,${FLOOR-FOXS-FOX_LIFT}px,${pz}px)`; }
 function place(nx,nz=z){ x=nx; z=nz; fox.style.transform=tf(x,z); fox.style.setProperty('--br', Math.max(.5,Math.min(.97,.94+z*.0007)).toFixed(3)); }
 function sx(px,pz){ return px*P/(P-pz); }
 function applyClasses(){ fox.className = ['pose-'+pose, BEHAV[pose]||'', facing==='right'?'face-right':'', imgOK?'img-mode':''].join(' ').trim(); }
@@ -235,10 +238,18 @@ if (ROUND){
     carry: { f:['r_carry'], ...waddle, bookAt:[.29,.43] },   // 책을 품에 안고 걷기 (bookAt: 그림 속 책 위치 비율)
     reach: { f:['r_reach'], h:258, sh:'30%' },         // 서서 한 앞발 뻗어 뒤적이기
     reachSit:{ f:['r_reach'], h:258, sh:'30%' },
-    rest:  { f:['r_stand'], h:240, sh:'30%' },         // 앉아 쉬는 그림이 생기면 교체
-    sit:   { f:['r_read'],  h:215, sh:'46%' },          // 앉아서 펼친 책 읽기
+    rest:  { f:['r_rest'],  h:205, sh:'50%' },         // 꼬리 감고 앉아 졸기
+    sitdown:{ f:['r_sitdown'], h:228, sh:'40%' },      // 책 안고 앉는 중
+    // 몸 돌리기 중간 그림: 옆모습 ↔ 정면 사이 (turn2 = 거의 옆, turn = 비스듬히)
+    turn2: { f:['r_turn_b'], h:244, sh:'30%' },
+    turn:  { f:['r_turn'],   h:240, sh:'30%' },
+    turnCarry: { f:['r_turn_carry'], h:240, sh:'30%' },
+    sit:   { f:['r_bookclose'], h:210, sh:'52%' },     // 꼬리 감고 앉아 책 읽기 (먹기 그림과 같은 자세)
     // 먹기: 지금은 한 장(입 벌림) + 씹는 들썩임(css .chewing). 입 다문 컷·책 줄어드는 단계가 생기면 f에 순서대로 추가하고 fps 지정
-    eat:   { f:['r_eat'],   h:220, sh:'46%', mouth:[.5,.37] },
+    eat:   { f:['r_eat2'],  h:210, sh:'52%', mouth:[.5,.4] },
+    // 먹기 단계: 한 입마다 다음 그림으로 → 책이 줄어들다 빈손이 됨 (bookclose=입에 대기, eat2=씹기, eat3=반쪽 깨물기, eat4=반쪽 씹기, eat5=빈손)
+    eatSteps: ['r_bookclose','r_eat2','r_bookclose','r_eat2','r_eat3','r_eat4','r_eat3','r_eat4','r_eat5'],
+    full:  { f:['r_eat5'],  h:210, sh:'52%' },          // 다 먹고 만족
     sleep: { f:['r_sleep'], h:132, sh:'82%', head:[.3,.33] },
   });
 }
@@ -246,7 +257,7 @@ const SRC = n => `assets/fox/${n}.webp`;
 let imgOK=false, frameTimer=null;
 const imgCache={};
 function preloadFox(){
-  const names=[...new Set(Object.values(POSES).flatMap(p=>p.f))];
+  const names=[...new Set(Object.values(POSES).flatMap(p=>Array.isArray(p)?p:p.f))];
   return Promise.all(names.map(n=>new Promise((res,rej)=>{ const im=new Image(); imgCache[n]=im; im.onload=()=>(im.decode?im.decode().catch(()=>{}):Promise.resolve()).then(res); im.onerror=rej; im.src=SRC(n); })))
     .then(()=>{ imgOK=true; }).catch(()=>{ imgOK=false; });
 }
@@ -257,14 +268,33 @@ function applyLook(img,c){
   img.style.setProperty('--dx',(c.dx||0)+'px'); img.style.setProperty('--dy',(c.dy||0)+'px');
   fox.style.setProperty('--shw', c.sh);
 }
+/* 옆모습 포즈와 정면 포즈 사이를 오갈 때 중간 그림(몸 돌리기)을 짧게 끼워 넣음.
+   포즈 값은 바로 바뀌고(동작 로직은 그대로), 화면에만 중간 그림이 TURN_MS씩 보였다가 최종 그림으로 넘어감 */
+const SIDE=new Set(['walk','crawl','carry','reach','reachSit']), FRONT=new Set(['stand','rest','sit','eat','full']);
+const TURN_MS=110;
+let turnTimer=null;
+function turnSeq(from,to){
+  if (!ROUND || !POSES.turn) return [];
+  if (from==='carry' && to==='sit') return ['turnCarry','sitdown'];   // 책 안고 돌아서 → 앉는 중 → 읽기
+  if (SIDE.has(from) && FRONT.has(to)) return from==='carry' ? ['turnCarry'] : ['turn2','turn'];
+  if (FRONT.has(from) && SIDE.has(to)) return to==='carry' ? ['turnCarry'] : ['turn','turn2'];
+  return [];
+}
 function setPose(p){
   if (p===pose && (imgOK ? curImg : inner.firstChild)){ applyClasses(); return; }
+  const seq=turnSeq(pose,p); clearTimeout(turnTimer);
   pose=p; clearInterval(frameTimer); frameTimer=null; bob.style.transform='';
   if (imgOK){
     const c=POSES[p]; const old=[...inner.querySelectorAll('img')];
     const img=new Image(); img.alt=''; img.draggable=false; img.className='enter';
     img.src=SRC(c.f[0]); applyLook(img,c);
     inner.appendChild(img); curImg=img; curFrame=0; stepDist=0;
+    if (seq.length){   // 중간 그림부터 보여주고 순서대로 최종 그림으로
+      const show=k=>{ if (curImg!==img) return;
+        if (k<seq.length){ const m=POSES[seq[k]]; img.src=SRC(m.f[0]); applyLook(img,m); turnTimer=setTimeout(()=>show(k+1), TURN_MS/SPD); }
+        else { img.src=SRC(c.f[0]); applyLook(img,c); positionHeld(); } };
+      show(0);
+    }
     requestAnimationFrame(()=>requestAnimationFrame(()=>img.classList.remove('enter')));
     setTimeout(()=>old.forEach(o=>o.remove()), 170);
     if (c.fps && !c.stride){ let i=0; frameTimer=setInterval(()=>{ i=(i+1)%c.f.length; img.src=SRC(c.f[i]); }, 1000/(c.fps*SPD)); }
@@ -555,8 +585,13 @@ async function fetchAndEat(chosen){
   }
 
   setPose('eat');
-  for (let b=1;b<=6;b++){ if (!imgOK) bite(b); crumbs(); await wait(imgOK?650:540); }
-  held.className=''; if (ROUND){ setPose('rest'); await wait(450); } else { setPose('sit'); await wait(650); }
+  if (ROUND && POSES.eatSteps){
+    for (const n of POSES.eatSteps){ if (curImg) curImg.src=SRC(n); if (n!=='r_bookclose') crumbs(); await wait(430); }
+    held.className=''; setPose('full'); await wait(900);
+  } else {
+    for (let b=1;b<=6;b++){ if (!imgOK) bite(b); crumbs(); await wait(imgOK?650:540); }
+    held.className=''; if (ROUND){ setPose('rest'); await wait(450); } else { setPose('sit'); await wait(650); }
+  }
 
   setPose('sleep'); startZz(); await wait(2400);
   await enterDream(book);
