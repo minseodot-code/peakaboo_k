@@ -199,11 +199,20 @@ const wait = ms => new Promise(r=>setTimeout(r, ms/SPD));
 const foxW = () => fox.offsetWidth;
 const rand = (a,b) => a + Math.random()*(b-a);
 
-// FOX_LIFT: 여우 판을 바닥에서 살짝 띄움. 바닥과 딱 붙어 있으면 브라우저의 3D 겹침 계산 때문에
-// 앞쪽(앉는 자리)에서 여우 아랫부분이 바닥에 가려지는 현상이 있어서
-const FOX_LIFT=20;
-function tf(px,pz){ return `translate3d(${px-FOXS/2}px,${FLOOR-FOXS-FOX_LIFT}px,${pz}px)`; }
-function place(nx,nz=z){ x=nx; z=nz; fox.style.transform=tf(x,z); fox.style.setProperty('--br', Math.max(.5,Math.min(.97,.94+z*.0007)).toFixed(3)); }
+/* 성능: 여우는 3D 방(#world) 밖의 평면 레이어로 그림.
+   방 안 3D 좌표(x, 바닥, z)를 화면 좌표로 직접 계산해 옮기고 원근만큼 크기를 줄임.
+   여우가 움직여도 브라우저가 방 전체(바닥·벽·책장)를 다시 그리지 않아서 버벅임이 크게 줄어듦 */
+let KS=1;                                   // 방 축척(--k) 캐시
+function proj(wx,wy,wz){                    // 방 좌표 → 화면 좌표 (#viewport 의 perspective 1100, origin 50% 42% 와 같은 계산)
+  const cx=innerWidth/2, cy=innerHeight/2, oy=innerHeight*0.42, f=P/(P-wz);
+  return { x: cx + KS*wx*f, y: oy + (cy + KS*wy - oy)*f, s: KS*f };
+}
+function tf(px,pz){
+  const b=proj(px, FLOOR, pz);
+  return `translate3d(${(b.x-FOXS/2*b.s).toFixed(2)}px,${(b.y-FOXS*b.s).toFixed(2)}px,0) scale(${b.s.toFixed(4)})`;
+}
+let lastBr='';
+function place(nx,nz=z){ x=nx; z=nz; fox.style.transform=tf(x,z); const br=(Math.round(Math.max(.5,Math.min(.97,.94+z*.0007))*50)/50).toFixed(2); if (br!==lastBr){ lastBr=br; fox.style.setProperty('--br', br); } }   // 밝기는 0.02 단위로만 바꿔 다시 그리기를 줄임
 function sx(px,pz){ return px*P/(P-pz); }
 function applyClasses(){ fox.className = ['pose-'+pose, BEHAV[pose]||'', facing==='right'?'face-right':'', imgOK?'img-mode':''].join(' ').trim(); }
 function face(dir){ facing=dir; inner.style.transform = dir==='left' ? 'none' : 'scaleX(-1)'; applyClasses(); if (typeof positionHeld==='function') positionHeld(); }
@@ -368,7 +377,7 @@ function moveTo(tx,tz,speed,acc){
   return new Promise(res=>{ mover={tx,tz,speed,acc,res}; });
 }
 function stopMove(){ if (mover){ const r=mover.res; mover=null; vel=0; r(); } }
-function fitRoom(){ document.documentElement.style.setProperty('--k', Math.min(innerWidth/1280, innerHeight/760).toFixed(3)); }
+function fitRoom(){ KS=+Math.min(innerWidth/1280, innerHeight/760).toFixed(3); document.documentElement.style.setProperty('--k', KS); if (typeof place==='function' && fox.style.transform) place(x,z); }
 function showHint(){ hint.classList.add('show'); }
 function hideHint(){ hint.classList.remove('show'); }
 function flash(msg){ toast.textContent=msg; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'),1800); }
@@ -416,7 +425,7 @@ function ensureSegs(){
 const floorEl=document.getElementById('floorP');
 function applyCam(){
   shelf.style.transform=`translateX(${-cam}px) translateZ(${DEPTH}px)`;
-  floorEl.style.backgroundPosition=`0 0, 0 0, 0 ${-cam}px, 0 0`;
+  floorEl.style.backgroundPosition=`0 ${-cam}px`;
   ensureSegs(); placePile();
 }
 function spineZ(sp){
@@ -464,7 +473,7 @@ let reachKind='reach', reachSwapAt=0;  // 책장 앞에 멈춰 있는 동안 서
 function pickReach(t){ reachKind=Math.random()<.35?'reachSit':'reach'; reachSwapAt=t+rand(3500,7000); }
 function startFollow(){ following=true; run++; stopMove(); pointerMovedAt=performance.now(); }  // 꿈에서 깬 직후 바로 쉬지 않도록 시계를 새로 시작
 function screenToTarget(cx,cy){
-  const K=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--k'))||1;
+  const K=KS;
   const ox=innerWidth/2, oy=innerHeight*0.42, off=innerHeight*0.08;
   const fw=(cx-ox)/(K*(WX+DEPTH));
   if (fw>0){
@@ -477,7 +486,7 @@ function screenToTarget(cx,cy){
 }
 function tick(t){
   requestAnimationFrame(tick);
-  const dt=Math.min(.05,(t-lastT)/1000||0); lastT=t;
+  const dt=Math.min(.1,(t-lastT)/1000||0); lastT=t;
   if (mover){
     const r=advance(mover.tx,mover.tz,mover.speed,dt,mover.acc);
     if (r.left<0.6){ place(mover.tx,mover.tz); const res=mover.res; mover=null; vel=0; res(); }
@@ -806,7 +815,7 @@ document.documentElement.addEventListener('pointerleave', ()=>{ pointerIn=false;
 addEventListener('resize', fitRoom);
 
 /* 시작 */
-function start(){ if (held.parentNode!==bob) bob.appendChild(held); fitRoom(); Promise.all([loadBooks(), preloadFox()]).then(()=>{ fox.parentNode.appendChild(pileEl); loadPile(); renderPile(); applyCam(); intro(); loadDebug(); }); }
+function start(){ if (held.parentNode!==bob) bob.appendChild(held); if (fox.parentNode!==stage) stage.appendChild(fox); fitRoom(); Promise.all([loadBooks(), preloadFox()]).then(()=>{ document.getElementById('world').appendChild(pileEl); loadPile(); renderPile(); applyCam(); intro(); loadDebug(); }); }
 /* #debug 일 때만 조정 패널 스크립트를 불러옴 (없으면 패널 코드 자체가 로드되지 않음) */
 function loadDebug(){
   if (location.hash!=='#debug') return;
