@@ -25,6 +25,7 @@
 ## 좌표
 - 3D 방 단위는 px. z는 화면 쪽이 +. 상수: `P, ZN, WX, FLOOR, DEPTH, SH_START, SEG, ZDEEP, ZFRONT`
 - 여우 위치는 `place(x, z)`, 이동은 `moveTo(x, z, speed)` (가속·감속 포함), 매 프레임 처리는 `tick()`
+- 성능: 여우(#fox)는 3D 방(#world) 밖 `#stage`에 있는 평면 레이어. `proj()`로 방 좌표를 화면 좌표로 계산해 옮김. 바닥은 무늬(#floorP)·어둠(#floorFade)·빛(#floorGlow) 판으로 나눔. 큰 3D 판에 그라데이션을 여러 겹 쌓거나 매 프레임 스타일을 바꾸면 버벅이니 피할 것
 
 ## 여우 그림
 - `POSES` 객체에서 포즈별 프레임, 높이(h), 그림자 폭(sh), 머리·입 위치를 조정
