@@ -212,7 +212,7 @@ function tf(px,pz){
   return `translate3d(${(b.x-FOXS/2*b.s).toFixed(2)}px,${(b.y-FOXS*b.s).toFixed(2)}px,0) scale(${b.s.toFixed(4)})`;
 }
 let lastBr='';
-function place(nx,nz=z){ x=nx; z=nz; fox.style.transform=tf(x,z); const br=(Math.round(Math.max(.5,Math.min(.97,.94+z*.0007))*50)/50).toFixed(2); if (br!==lastBr){ lastBr=br; fox.style.setProperty('--br', br); } }   // 밝기는 0.02 단위로만 바꿔 다시 그리기를 줄임
+function place(nx,nz=z){ x=nx; z=nz; fox.style.transform=tf(x,z); const br=(Math.round(Math.max(.9,Math.min(1,.98+z*.0002))*50)/50).toFixed(2); if (br!==lastBr){ lastBr=br; fox.style.setProperty('--br', br); } }   // 밝기는 0.02 단위로만 바꿔 다시 그리기를 줄임
 function sx(px,pz){ return px*P/(P-pz); }
 function applyClasses(){ fox.className = ['pose-'+pose, BEHAV[pose]||'', facing==='right'?'face-right':'', imgOK?'img-mode':''].join(' ').trim(); }
 function face(dir){ facing=dir; inner.style.transform = dir==='left' ? 'none' : 'scaleX(-1)'; applyClasses(); if (typeof positionHeld==='function') positionHeld(); }
@@ -394,6 +394,8 @@ function nearestPainted(css){
   for (const p of PAINTED){ const q=[1,3,5].map(i=>parseInt(p.c.slice(i,i+2),16)); const d=(q[0]-t[0])**2+(q[1]-t[1])**2+(q[2]-t[2])**2; if (d<bd){ bd=d; best=p; } }
   return best;
 }
+let lastCamFx=-1;
+function setMask(el,k){ const v=`${cam - k*SEG}px 0`; el.style.webkitMaskPosition=v; el.style.maskPosition=v; }
 function makeSeg(k){
   const r=rng(k*7919+13);
   const seg=document.createElement('div'); seg.className='seg'; seg.dataset.k=k; seg.style.left=(k*SEG)+'px'; seg.style.width=SEG+'px';
@@ -424,6 +426,15 @@ function makeSeg(k){
     }
     seg.appendChild(row);
   }
+  // 책장 발치 꽃덤불: 칸마다 몇 개씩 (책장 앞쪽으로 살짝 띄워 세움)
+  for (let i=0;i<4;i++){
+    const cl=document.createElement('div'); cl.className='clump';
+    const n=1+Math.floor(r()*5), hgt=Math.round(90+r()*70);
+    Object.assign(cl.style,{left:Math.round(r()*(SEG-120))+'px',width:Math.round(hgt*.95)+'px',height:hgt+'px',
+      backgroundImage:`url(assets/meadow/clump${n}.webp)`,transform:`translateY(${hgt*.12}px) translateZ(${Math.round(10+r()*60)}px)`});
+    seg.appendChild(cl);
+  }
+  setMask(seg,k);
   shelf.appendChild(seg); segs.set(k,seg);
 }
 function ensureSegs(){
@@ -435,6 +446,11 @@ const floorEl=document.getElementById('floorP');
 function applyCam(){
   shelf.style.transform=`translateX(${-cam}px) translateZ(${DEPTH}px)`;
   floorEl.style.backgroundPosition=`0 ${-cam}px`;
+  // 언덕은 아주 천천히(시차), 안개 마스크는 화면 기준 위치에 고정. 상속되는 CSS 변수 대신 속성을 직접 바꿔 스타일 재계산을 줄임
+  if (cam!==lastCamFx){ lastCamFx=cam;
+    stage.style.setProperty('background-position', `calc(50% - ${(cam*0.04).toFixed(1)}px) 100%`, 'important');
+    for (const [k,el] of segs) setMask(el,k);
+  }
   ensureSegs(); placePile(); if (hlTarget) queueHL();
 }
 function spineZ(sp){
