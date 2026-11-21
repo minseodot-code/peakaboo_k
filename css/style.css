@@ -244,8 +244,13 @@ svg .head{transform-box:fill-box;transform-origin:50% 100%}
    언덕(#stage 배경)은 2D 그림 한 장이라 가볍고, 책장 안쪽은 크림색 안개로 흐려짐 */
 :root{--cream:#f4f1e6}
 html,body{background:var(--cream)}
-#stage{background:var(--cream) url(../assets/meadow/land.webp) 50% 100% / auto 100% no-repeat!important}
-@media (min-aspect-ratio:2976/1000){ #stage{background-size:100% auto!important} }
+/* 언덕 위에 크림 종이색을 한 겹 덮고 종이 결을 얹음 (하늘이 하얗게 비던 것을 크림 종이처럼) */
+#stage{background:
+  url(../assets/tex/paper.webp) 0 0 / 160px 160px repeat,
+  linear-gradient(rgba(240,230,205,.38),rgba(240,230,205,.38)),
+  var(--cream) url(../assets/meadow/land.webp) 50% 100% / auto 100% no-repeat!important;
+  background-blend-mode:normal,normal,normal!important}
+@media (min-aspect-ratio:2976/1000){ #stage{background-size:160px 160px,auto,100% auto!important} }
 #wallL{background:none!important}
 #ceilP,#wallR,#backP{display:none}
 #floorP{background:none!important}
@@ -265,3 +270,18 @@ html,body{background:var(--cream)}
 .zz{color:#8a7f70!important}
 /* 책장 발치·앞 풀밭에 서 있는 꽃덤불 */
 .clump{position:absolute;bottom:0;pointer-events:none;background-size:contain;background-repeat:no-repeat;background-position:50% 100%;transform-origin:50% 100%}
+
+/* ===================== 꿈: 별이 뜬 밤하늘 =====================
+   밤하늘 그림은 assets/meadow/night.webp (지금은 임시로 만든 별밤. 미드저니 그림으로 교체 예정) */
+#ink{
+  --ink:#f3ecdc; --muted:#b9b2c8;
+  background:#141a33 url(../assets/meadow/night.webp) 50% 0 / cover fixed!important;
+  color:var(--ink);
+}
+#ink .blob{mix-blend-mode:screen;opacity:.55}
+#ink .blob.b2{background:radial-gradient(circle at 50% 50%,rgba(120,140,220,.30),transparent 65%)}
+#ink .fnote{border-top-color:rgba(243,236,220,.22)}
+#ink .tags span{background:rgba(243,236,220,.12);color:#efe6d2}
+#ink .actions a,#ink .actions button.ghost{border-color:rgba(243,236,220,.4);color:var(--ink)}
+#ink .actions button:not(.ghost){background:#f3ecdc;color:#1d2340}
+#ink .q p{text-shadow:0 0 18px rgba(255,240,200,.18)}

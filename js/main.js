@@ -426,14 +426,7 @@ function makeSeg(k){
     }
     seg.appendChild(row);
   }
-  // 책장 발치 꽃덤불: 칸마다 몇 개씩 (책장 앞쪽으로 살짝 띄워 세움)
-  for (let i=0;i<4;i++){
-    const cl=document.createElement('div'); cl.className='clump';
-    const n=1+Math.floor(r()*5), hgt=Math.round(90+r()*70);
-    Object.assign(cl.style,{left:Math.round(r()*(SEG-120))+'px',width:Math.round(hgt*.95)+'px',height:hgt+'px',
-      backgroundImage:`url(assets/meadow/clump${n}.webp)`,transform:`translateY(${hgt*.12}px) translateZ(${Math.round(10+r()*60)}px)`});
-    seg.appendChild(cl);
-  }
+  // 꽃덤불(.clump)은 '책꽃' 기능 전까지 쓰지 않음 (언덕에는 풀만)
   setMask(seg,k);
   shelf.appendChild(seg); segs.set(k,seg);
 }
