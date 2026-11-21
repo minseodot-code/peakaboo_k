@@ -72,23 +72,10 @@ html,body{margin:0;height:100%;overflow:hidden;background:#0b0b0b;font-family:'G
 .row:last-child{border-bottom:none}
 .spine{
   position:relative;flex:none;border-radius:2px 2px 0 0;
-  transition:filter .3s, opacity .4s;
-  background-color:var(--c,#a99a86);
-  background-image:
-    var(--grain),
-    var(--wash),
-    radial-gradient(ellipse 140% 55% at 35% var(--wy,40%),rgba(255,250,236,.26),rgba(255,250,236,0) 70%),
-    linear-gradient(180deg,rgba(255,250,236,.12),rgba(255,250,236,0) 30%,rgba(40,26,14,.12) 85%);
-  background-blend-mode:multiply,multiply,normal,normal;background-position:0 0,var(--wp,0 0),0 0,0 0;
-  border:1px solid var(--pencil);border-bottom:none;
-  box-shadow:inset 0 0 6px rgba(70,46,28,.5),inset -2px 0 0 rgba(40,26,14,.16);
+  transition:opacity .4s;
+  background-color:var(--c,#a99a86);background-size:100% 100%;background-repeat:no-repeat;
+  box-shadow:inset -1px 0 0 rgba(40,26,14,.25);
 }
-/* 책등의 연필 띠 두 줄 */
-.spine::after{content:"";position:absolute;left:1px;right:1px;top:var(--band,16%);height:5px;
-  border-top:1px solid rgba(58,40,26,.55);border-bottom:1px solid rgba(58,40,26,.45);background:rgba(255,248,230,.12)}
-/* 일부 책에는 종이 라벨 */
-.spine.lbl::before{content:"";position:absolute;left:22%;right:22%;top:48%;height:16%;
-  background:rgba(240,230,206,.55);border:1px solid rgba(58,40,26,.35);border-radius:1px}
 /* 성능: 책에 커서를 올렸을 때 책 자체를 밝히면 큰 3D 책장 전체를 다시 그려서 버벅였음.
    대신 화면 위 평면 레이어(#spineHL)를 그 책 위치로 옮겨 은은하게 밝힘 */
 #spineHL{position:fixed;left:0;top:0;pointer-events:none;z-index:3;opacity:0;

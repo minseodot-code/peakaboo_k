@@ -385,31 +385,40 @@ function flash(msg){ toast.textContent=msg; toast.classList.add('show'); setTime
 /* 책장: 끝없이 이어지는 세그먼트 */
 const segs = new Map(); const goneSet = new Set();
 function rng(a){ return ()=>{ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+/* 책장 책: 손으로 그린 책등 그림 (assets/books). ar=가로/세로 비율, c=평균 색 */
+const PAINTED=[{"f": "b01", "c": "#7d8584", "ar": 0.295}, {"f": "b02", "c": "#c2a380", "ar": 0.086}, {"f": "b03", "c": "#c8b49a", "ar": 0.24}, {"f": "b04", "c": "#c6a785", "ar": 0.287}, {"f": "b05", "c": "#c2a78a", "ar": 0.118}, {"f": "b06", "c": "#c29c8e", "ar": 0.203}, {"f": "b07", "c": "#96957f", "ar": 0.259}, {"f": "b08", "c": "#888b82", "ar": 0.131}, {"f": "b09", "c": "#c3ac91", "ar": 0.187}, {"f": "b10", "c": "#d9ccb8", "ar": 0.219}, {"f": "b11", "c": "#b69979", "ar": 0.105}, {"f": "b12", "c": "#b28c75", "ar": 0.134}, {"f": "b13", "c": "#c1a78a", "ar": 0.139}, {"f": "b14", "c": "#657174", "ar": 0.18}, {"f": "b15", "c": "#7b4a51", "ar": 0.295}, {"f": "b16", "c": "#afbaaf", "ar": 0.089}, {"f": "b17", "c": "#a092a9", "ar": 0.241}, {"f": "b18", "c": "#758989", "ar": 0.288}, {"f": "b19", "c": "#ab879c", "ar": 0.119}, {"f": "b20", "c": "#c5866f", "ar": 0.204}, {"f": "b21", "c": "#5d404e", "ar": 0.259}, {"f": "b22", "c": "#738361", "ar": 0.135}, {"f": "b23", "c": "#8692a9", "ar": 0.187}, {"f": "b24", "c": "#baa7b2", "ar": 0.213}, {"f": "b25", "c": "#355051", "ar": 0.114}, {"f": "b26", "c": "#9c5062", "ar": 0.136}, {"f": "b27", "c": "#928e9f", "ar": 0.14}, {"f": "b28", "c": "#afaf87", "ar": 0.182}, {"f": "b29", "c": "#b18a4d", "ar": 0.289}, {"f": "b30", "c": "#848a9f", "ar": 0.086}, {"f": "b31", "c": "#535d47", "ar": 0.226}, {"f": "b32", "c": "#a35f4a", "ar": 0.264}, {"f": "b33", "c": "#cd9d7a", "ar": 0.11}, {"f": "b34", "c": "#3d4e53", "ar": 0.213}, {"f": "b35", "c": "#86a09b", "ar": 0.253}, {"f": "b36", "c": "#bb7e74", "ar": 0.122}, {"f": "b37", "c": "#804b33", "ar": 0.216}, {"f": "b38", "c": "#afa564", "ar": 0.213}, {"f": "b39", "c": "#c08948", "ar": 0.104}, {"f": "b40", "c": "#885e5e", "ar": 0.139}, {"f": "b41", "c": "#99a3b0", "ar": 0.139}, {"f": "b42", "c": "#726268", "ar": 0.197}, {"f": "b43", "c": "#766b79", "ar": 0.289}, {"f": "b44", "c": "#d59980", "ar": 0.083}, {"f": "b45", "c": "#889c95", "ar": 0.23}, {"f": "b46", "c": "#724d59", "ar": 0.261}, {"f": "b47", "c": "#c9806b", "ar": 0.11}, {"f": "b48", "c": "#7d7d92", "ar": 0.213}, {"f": "b49", "c": "#516966", "ar": 0.253}, {"f": "b50", "c": "#af98a8", "ar": 0.119}, {"f": "b51", "c": "#8c3c43", "ar": 0.217}, {"f": "b52", "c": "#798a9f", "ar": 0.218}, {"f": "b53", "c": "#9f9888", "ar": 0.098}, {"f": "b54", "c": "#a26440", "ar": 0.146}, {"f": "b55", "c": "#7d7e76", "ar": 0.136}, {"f": "b56", "c": "#b78082", "ar": 0.205}];
+const ROW_H=80;   // 선반 한 칸의 책 높이(px) 기준
+function nearestPainted(css){
+  const m=/^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(css.trim()); if (!m) return PAINTED[0];
+  const t=[1,2,3].map(i=>parseInt(m[i],16)); let best=PAINTED[0], bd=1e9;
+  for (const p of PAINTED){ const q=[1,3,5].map(i=>parseInt(p.c.slice(i,i+2),16)); const d=(q[0]-t[0])**2+(q[1]-t[1])**2+(q[2]-t[2])**2; if (d<bd){ bd=d; best=p; } }
+  return best;
+}
 function makeSeg(k){
   const r=rng(k*7919+13);
   const seg=document.createElement('div'); seg.className='seg'; seg.dataset.k=k; seg.style.left=(k*SEG)+'px'; seg.style.width=SEG+'px';
   const rowW=SEG-8-8; let n=0, real=0;
   for (let ri=0; ri<6; ri++){
     const row=document.createElement('div'); row.className='row';
-    let used=0; const ws=[];
-    while (used < rowW){
-      let w=Math.round(12+r()*15);
-      if (rowW-used-w < 12) w=rowW-used; else w=Math.min(w,rowW-used);
-      ws.push(w); used+=w+1;
+    let used=0; const bs=[];
+    while (used < rowW){                       // 그린 책 그림을 골라, 그림 비율대로 폭을 정해 채움
+      const pb=PAINTED[Math.floor(r()*PAINTED.length)], hp=Math.round(80+r()*17);
+      let w=Math.max(7,Math.min(30,Math.round(ROW_H*hp/100*pb.ar)));
+      if (rowW-used-w < 7) w=rowW-used; else w=Math.min(w,rowW-used);
+      bs.push({pb,hp,w}); used+=w+1;
     }
-    for (const w of ws){
+    for (const {pb:pb0,hp,w} of bs){
       const sp=document.createElement('div'); sp.className='spine';
       const id=k+'-'+n; sp.dataset.id=id;
-      sp.style.width=w+'px'; sp.style.height=Math.round(80+r()*17)+'%';
-      let bg=PALETTE[Math.floor(r()*PALETTE.length)];
-      if (k===0 && real<BOOKS.length){   // 맨 앞 칸: 실제 책을 순서대로
-        sp.dataset.b=real; sp.classList.add('real'); bg=bookColor(BOOKS[real])||bg; real++;
+      sp.style.width=w+'px'; sp.style.height=hp+'%';
+      let pb=pb0, bg=pb.c;
+      if (k===0 && real<BOOKS.length){   // 맨 앞 칸: 실제 책을 순서대로 (책 color와 가장 비슷한 그림을 씀)
+        sp.dataset.b=real; sp.classList.add('real');
+        const want=bookColor(BOOKS[real]); if (want){ pb=nearestPainted(want); bg=want; }
+        real++;
       }
+      sp.style.backgroundImage=`url(assets/books/${pb.f}.webp)`;
       sp.style.setProperty('--c',bg); sp.dataset.c=bg;
-      sp.style.setProperty('--wy', Math.round(15+r()*60)+'%');
-      sp.style.setProperty('--wp', Math.round(r()*300)+'px '+Math.round(r()*300)+'px');
-      if (r()<.22) sp.classList.add('lbl');
-      sp.style.setProperty('--band', Math.round(8+r()*18)+'%');
       if (goneSet.has(id)) sp.classList.add('gone');
       row.appendChild(sp); n++;
     }
