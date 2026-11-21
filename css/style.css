@@ -236,3 +236,7 @@ svg .head{transform-box:fill-box;transform-origin:50% 100%}
 .pbook:hover,.pbook:focus-visible{filter:brightness(1.3);outline:none}
 .pbook:focus-visible{box-shadow:0 0 0 2px rgba(201,168,119,.8)}
 .plabel{position:absolute;left:-40px;right:-40px;text-align:center;color:#a59d92;font-size:14px;letter-spacing:.04em;pointer-events:none}
+
+/* 한 장짜리 먹기 그림: 씹을 때 몸이 살짝 들썩임 */
+.img-mode.chewing #foxBob{animation:chewBob .34s ease-in-out infinite alternate;transform-origin:50% 100%}
+@keyframes chewBob{from{transform:scale(1,1)}to{transform:scale(1.012,.985) translateY(1px)}}

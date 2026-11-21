@@ -221,11 +221,11 @@ const POSES = {
   eat:   { f:['eat_1','eat_2'], fps:3, h:215, sh:'40%', mouth:[.44,.3] },
   sleep: { f:['sleep'],     h:118, sh:'74%', head:[.2,.3] }
 };
-/* 새 동그란 티벳여우 (작업 중). 주소 끝에 ?fox=round 를 붙이면 미리보기.
-   걷기는 프레임 대신 뒤뚱 걸음(waddle: 걸음마다 좌우 기울기 tilt°, 통통 튐 bob px, 살짝 눌림)으로 코드가 움직임.
-   아직 그림이 없는 포즈(앉아 읽기, 먹기, 잠)는 예전 여우 그림을 씀. 그림이 다 모이면 ROUND_DEFAULT를 true로 */
-const ROUND_DEFAULT=false;
-const ROUND = ROUND_DEFAULT || new URLSearchParams(location.search).get('fox')==='round';
+/* 동그란 티벳여우 (기본). 예전 여우를 보려면 주소 끝에 ?fox=old
+   걷기는 프레임 대신 뒤뚱 걸음(waddle: 걸음마다 좌우 기울기 tilt°, 통통 튐 bob px, 살짝 눌림)으로 코드가 움직임 */
+const ROUND_DEFAULT=true;
+const FOX_Q=new URLSearchParams(location.search).get('fox');
+const ROUND = FOX_Q==='round' || (ROUND_DEFAULT && FOX_Q!=='old');
 if (ROUND){
   const waddle={ waddle:true, stride:24, bob:5, tilt:4, h:235, sh:'30%' };
   Object.assign(POSES,{
@@ -233,8 +233,13 @@ if (ROUND){
     walk:  { f:['r_walk'], ...waddle },
     crawl: { f:['r_walk'], ...waddle, stride:40 },    // 등장도 뒤뚱 걸음으로 (빨리 오니 보폭 넓게)
     carry: { f:['r_carry'], ...waddle, bookAt:[.29,.43] },   // 책을 품에 안고 걷기 (bookAt: 그림 속 책 위치 비율)
-    reach: { f:['r_stand'], h:240, sh:'30%' },        // 뒤적이기 그림 생기기 전 임시
-    rest:  { f:['r_stand'], h:240, sh:'30%' },
+    reach: { f:['r_reach'], h:258, sh:'30%' },         // 서서 한 앞발 뻗어 뒤적이기
+    reachSit:{ f:['r_reach'], h:258, sh:'30%' },
+    rest:  { f:['r_stand'], h:240, sh:'30%' },         // 앉아 쉬는 그림이 생기면 교체
+    sit:   { f:['r_read'],  h:215, sh:'46%' },          // 앉아서 펼친 책 읽기
+    // 먹기: 지금은 한 장(입 벌림) + 씹는 들썩임(css .chewing). 입 다문 컷·책 줄어드는 단계가 생기면 f에 순서대로 추가하고 fps 지정
+    eat:   { f:['r_eat'],   h:220, sh:'46%', mouth:[.5,.37] },
+    sleep: { f:['r_sleep'], h:132, sh:'82%', head:[.3,.33] },
   });
 }
 const SRC = n => `assets/fox/${n}.webp`;
@@ -551,7 +556,7 @@ async function fetchAndEat(chosen){
 
   setPose('eat');
   for (let b=1;b<=6;b++){ if (!imgOK) bite(b); crumbs(); await wait(imgOK?650:540); }
-  held.className=''; setPose('sit'); await wait(650);
+  held.className=''; if (ROUND){ setPose('rest'); await wait(450); } else { setPose('sit'); await wait(650); }
 
   setPose('sleep'); startZz(); await wait(2400);
   await enterDream(book);
