@@ -426,7 +426,7 @@ const floorEl=document.getElementById('floorP');
 function applyCam(){
   shelf.style.transform=`translateX(${-cam}px) translateZ(${DEPTH}px)`;
   floorEl.style.backgroundPosition=`0 ${-cam}px`;
-  ensureSegs(); placePile();
+  ensureSegs(); placePile(); if (hlTarget) queueHL();
 }
 function spineZ(sp){
   const k=+sp.parentNode.parentNode.dataset.k;
@@ -809,6 +809,20 @@ shelf.addEventListener('click', onShelf);
 shelf.addEventListener('keydown', e=>{ if (e.key==='Enter'||e.key===' '){ e.preventDefault(); onShelf(); } });
 addEventListener('keydown', e=>{ if (e.key==='Escape' && mode==='dream') wake(); });
 addEventListener('pointermove', e=>{ px=e.clientX; py=e.clientY; pointerIn=true; pointerMovedAt=performance.now(); if (mode==='idle' && !following) startFollow(); });
+/* 커서 아래 책 강조: 평면 레이어 하나를 그 책 위치로 옮김 (한 프레임에 한 번만) */
+const spineHL=document.createElement('div'); spineHL.id='spineHL'; stage.appendChild(spineHL);
+let hlTarget=null, hlQueued=false;
+function updateHL(){
+  hlQueued=false;
+  const sp=hlTarget;
+  if (!sp || sp.classList.contains('gone') || mode==='dream'){ spineHL.classList.remove('on'); return; }
+  const r=sp.getBoundingClientRect();
+  spineHL.style.transform=`translate(${r.left.toFixed(1)}px,${r.top.toFixed(1)}px)`; spineHL.style.width=r.width.toFixed(1)+'px'; spineHL.style.height=r.height.toFixed(1)+'px';
+  spineHL.classList.add('on');
+}
+function queueHL(){ if (!hlQueued){ hlQueued=true; requestAnimationFrame(updateHL); } }
+shelf.addEventListener('pointerover', e=>{ hlTarget=(e.target.closest && e.target.closest('.spine'))||null; queueHL(); });
+shelf.addEventListener('pointerleave', ()=>{ hlTarget=null; spineHL.classList.remove('on'); });
 addEventListener('pointerdown', e=>{ px=e.clientX; py=e.clientY; pointerIn=true; pointerMovedAt=performance.now(); if (mode==='idle' && !following) startFollow(); });
 document.documentElement.addEventListener('pointerleave', ()=>{ pointerIn=false; if (following){ following=false; if (mode==='idle') idle(); } });
 
