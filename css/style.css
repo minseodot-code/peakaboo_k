@@ -241,26 +241,29 @@ svg .head{transform-box:fill-box;transform-origin:50% 100%}
 
 /* ===================== 꽃밭 언덕 테마 =====================
    벽·천장 없이 크림색 하늘 아래 언덕과 꽃밭이 펼쳐진 곳에 책장이 끝없이 서 있음.
-   언덕(#stage 배경)은 2D 그림 한 장이라 가볍고, 책장 안쪽은 크림색 안개로 흐려짐 */
+   풀밭(#stage 배경)은 2D 그림 한 장이라 가볍고, 책장 안쪽은 크림색 안개로 흐려짐 */
 :root{--cream:#f4f1e6}
 html,body{background:var(--cream)}
-/* 언덕 위에 크림 종이색을 한 겹 덮고 종이 결을 얹음 (하늘이 하얗게 비던 것을 크림 종이처럼) */
+/* 풀밭 위에 크림 종이색을 한 겹 덮고 종이 결을 얹음 (하늘이 하얗게 비던 것을 크림 종이처럼) */
 #stage{background:
   url(../assets/tex/paper.webp) 0 0 / 160px 160px repeat,
   linear-gradient(rgba(240,230,205,.38),rgba(240,230,205,.38)),
-  var(--cream) url(../assets/meadow/land.webp) 50% 100% / auto 100% no-repeat!important;
+  var(--cream) url(../assets/meadow/land.webp) 88% 100% / auto 100% no-repeat!important;
   background-blend-mode:normal,normal,normal!important}
-@media (min-aspect-ratio:2976/1000){ #stage{background-size:160px 160px,auto,100% auto!important} }
+/* 풀밭 그림(land.webp)은 지평선이 그림 위에서 42%에 오도록 만들어 둠 = 책장 소실점(#viewport perspective-origin 42%)과 같은 높이.
+   가로 88%: 오른쪽 먼 나무들이 화면 안에 들어오게. 그림 비율(2.51)보다 넓은 화면만 가로 맞춤 */
+@media (min-aspect-ratio:2510/1000){ #stage{background-size:160px 160px,auto,100% auto!important} }
 #wallL{background:none!important}
 #ceilP,#wallR,#backP{display:none}
 #floorP{background:none!important}
 #floorFade,#floorGlow{display:none}
 #wallShadow{display:none}
 #fog{display:none}
-/* 책장이 안쪽으로 갈수록 안개 속으로 사라짐: 각 칸(.seg)에 마스크. 위치는 applyCam()이 --mx로 맞춤 */
-.seg{-webkit-mask-image:linear-gradient(90deg,#000 0,#000 260px,rgba(0,0,0,.55) 620px,rgba(0,0,0,.15) 900px,transparent 1150px);
-  mask-image:linear-gradient(90deg,#000 0,#000 260px,rgba(0,0,0,.55) 620px,rgba(0,0,0,.15) 900px,transparent 1150px);
-  -webkit-mask-size:1400px 100%;mask-size:1400px 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+/* 책장이 안쪽으로 갈수록 안개 속으로 사라짐: 각 칸(.seg)에 마스크. 위치는 setMask()가 맞춤.
+   마스크 앞쪽 3000px은 불투명 여백: 안쪽으로 들어가도 책장 앞부분이 잘리지 않아 옆면(#sidePanel)과 붙어 있음 */
+.seg{-webkit-mask-image:linear-gradient(90deg,#000 0,#000 3380px,rgba(0,0,0,.5) 3700px,transparent 4050px);
+  mask-image:linear-gradient(90deg,#000 0,#000 3380px,rgba(0,0,0,.5) 3700px,transparent 4050px);
+  -webkit-mask-size:4400px 100%;mask-size:4400px 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
   -webkit-mask-position:0 0;mask-position:0 0}
 #fox::before{display:none}
 #fox::after{background:rgba(80,92,60,.32)!important;filter:blur(5px)!important}
@@ -297,3 +300,49 @@ html,body{background:var(--cream)}
 .bflower.blooming{animation:bloom 1.6s cubic-bezier(.2,1.3,.4,1) both}
 @keyframes bloom{0%{clip-path:inset(100% 0 0 0);filter:brightness(1.6)}60%{clip-path:inset(0 0 0 0)}100%{clip-path:inset(0 0 0 0);filter:brightness(1)}}
 @media (prefers-reduced-motion:reduce){ .bflower.blooming{animation:none} }
+
+/* ---------- 오른쪽 도구 버튼: 먹은 책 모음 · 꽃 자르기 ---------- */
+#tools{position:fixed;right:20px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:14px;z-index:30;transition:opacity .5s}
+#tools.off{opacity:0;pointer-events:none}
+.tool{position:relative;display:grid;place-items:center;width:52px;height:52px;border-radius:50%;padding:0;cursor:pointer;
+  background:rgba(247,241,227,.92) url(../assets/tex/paper.webp);border:1.5px solid rgba(91,67,48,.55);
+  box-shadow:0 3px 10px rgba(90,70,40,.16),inset 0 0 0 3px rgba(255,255,255,.35);color:#5B4330;transition:transform .25s,box-shadow .25s}
+.tool svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.tool:hover,.tool:focus-visible{transform:translateY(-2px) rotate(-4deg);box-shadow:0 6px 14px rgba(90,70,40,.22),inset 0 0 0 3px rgba(255,255,255,.35);outline:none}
+.tool:focus-visible{border-color:#8a9ba8;box-shadow:0 0 0 3px rgba(138,155,168,.45)}
+.tool .tip{position:absolute;right:62px;top:50%;transform:translate(6px,-50%);white-space:nowrap;font-size:13px;color:#5f5446;
+  background:rgba(244,241,230,.94);padding:6px 12px;border-radius:999px;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s}
+.tool:hover .tip,.tool:focus-visible .tip{opacity:1;transform:translate(0,-50%)}
+#snipAsk{position:absolute;right:66px;bottom:-6px;width:260px;padding:18px 18px 16px;border-radius:18px;color:#4a3f32;
+  background:#f6efdf url(../assets/tex/paper.webp);border:1.5px solid rgba(91,67,48,.45);box-shadow:0 10px 30px rgba(80,60,30,.2)}
+#snipAsk p{margin:0 0 8px;font-family:'Gowun Batang',serif;font-size:16px;line-height:1.6}
+#snipAsk small{display:block;color:#857865;font-size:12px;line-height:1.5;margin-bottom:14px}
+#snipAsk div{display:flex;gap:8px}
+#snipAsk button{font-family:inherit;font-size:13px;padding:8px 14px;border-radius:999px;cursor:pointer;border:1px solid #bfb29a;background:transparent;color:#4a3f32}
+#snipAsk .ask-yes{background:#3B342A;color:#f3ede1;border-color:#3B342A}
+#snipAsk button:focus-visible{outline:2px solid #8a9ba8;outline-offset:2px}
+
+/* 꽃다발 */
+#bouquet{position:fixed;z-index:22;pointer-events:none;transform-origin:50% 100%}
+#bouquet svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.bq-stems{position:absolute;inset:0}
+.bq-f{position:absolute;left:50%;bottom:0;background:50% 100%/100% 100% no-repeat;transform-origin:50% 100%}
+.bq-f i{position:absolute;inset:0;background:var(--c);mix-blend-mode:multiply;opacity:.85;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+.bq-front{filter:drop-shadow(0 2px 3px rgba(80,60,30,.25))}
+.bflower.flying{pointer-events:none;transform-origin:50% 50%}
+.snipfx{position:fixed;z-index:25;width:34px;height:34px;color:#4a3f32;pointer-events:none}
+.snipfx svg{width:100%;height:100%;fill:rgba(247,241,227,.9);stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+#giftVeil{position:fixed;inset:0;z-index:21;pointer-events:none;opacity:0;
+  background:radial-gradient(ellipse 60% 55% at 50% 45%,rgba(250,244,230,.42),rgba(240,230,205,.74))}
+#giftCard{position:fixed;left:50%;bottom:5vh;transform:translate(-50%,12px);z-index:23;text-align:center;opacity:0;transition:opacity .6s,transform .6s;color:#4a3f32;max-width:min(560px,90vw)}
+#giftCard.show{opacity:1;transform:translate(-50%,0)}
+#giftCard .g1{margin:0 0 4px;font-family:'Gowun Batang',serif;font-weight:700;font-size:22px}
+#giftCard .g2{margin:0 0 4px;font-size:14px;color:#6f6352}
+#giftCard .g3{margin:0 0 14px;font-size:12px;color:#8a7d69;line-height:1.6}
+#giftCard button{font-family:inherit;font-size:14px;padding:11px 22px;border-radius:999px;border:none;background:#3B342A;color:#f3ede1;cursor:pointer}
+#giftCard button:focus-visible{outline:2px solid #8a9ba8;outline-offset:3px}
+@media (max-width:700px){ #tools{right:12px;gap:10px} .tool{width:44px;height:44px} #snipAsk{right:56px;width:230px} }
+@media (prefers-reduced-motion:reduce){ #giftCard{transition:opacity .3s} .tool{transition:none} }
+
+/* 먼 책장 캔버스(js drawFar): 풀밭 배경 위, 3D 방 아래 */
+#farShelf{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}

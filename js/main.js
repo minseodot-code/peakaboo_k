@@ -35,6 +35,16 @@ function loadPile(){
   try { const slugs=JSON.parse(localStorage.getItem(PILE_KEY)||'[]');
         pile=[...new Set(slugs.map(sl=>BOOKS.findIndex(b=>bookSlug(b)===sl)).filter(i=>i>=0))]; }
   catch(e){ pile=[]; }
+  recordArchive(pile);   // 예전에 먹은 책도 기록에 옮겨 둠
+}
+/* 먹은 책 기록(아카이브): 꽃을 잘라도 남음. archive.html 이 이 기록으로 '먹은 책 모음' 페이지를 그림. [{s:책 slug, t:처음 먹은 시각}] */
+const ARCHIVE_KEY='peakaboo-archive', BOUQUET_KEY='peakaboo-bouquets';
+function readList(key){ try { const v=JSON.parse(localStorage.getItem(key)||'[]'); return Array.isArray(v)?v:[]; } catch(e){ return []; } }
+function writeList(key,v){ try { localStorage.setItem(key, JSON.stringify(v)); } catch(e){} }
+function recordArchive(idx){
+  const a=readList(ARCHIVE_KEY), have=new Set(a.map(r=>r.s)); let ch=false;
+  for (const i of idx){ const sl=bookSlug(BOOKS[i]); if (!have.has(sl)){ a.push({s:sl,t:Date.now()}); have.add(sl); ch=true; } }
+  if (ch) writeList(ARCHIVE_KEY,a);
 }
 function savePile(){ try { localStorage.setItem(PILE_KEY, JSON.stringify(pile.map(i=>bookSlug(BOOKS[i])))); } catch(e){} }
 function pileBook(i,k){
@@ -71,8 +81,10 @@ function flowerSpot(i){
   const r=rng(hash(bookSlug(BOOKS[i]))); let x,z,t=0;
   do { x=-300+r()*860; z=-650+r()*820; t++; }
   while (t<20 && (Math.hypot(x-PILE.x,z-PILE.z)<220 || Math.hypot(x-SEAT.x,z-SEAT.z)<130));
-  return {x,z,type:FLOWERS[Math.floor(r()*FLOWERS.length)],h:Math.round(100+r()*45),tilt:(r()*8-4).toFixed(1)};
+  return {x,z,type:flowerType(bookSlug(BOOKS[i])),h:Math.round(100+r()*45),tilt:(r()*8-4).toFixed(1)};
 }
+/* 꽃 모양은 책 제목만으로 정함 (archive.js 도 같은 계산을 씀) */
+function flowerType(slug){ return FLOWERS[hash(slug+'#flower')%FLOWERS.length]; }
 function makeFlower(i){
   const sp=flowerSpot(i), b=BOOKS[i], w=Math.round(sp.h*sp.type.ar);
   const el=document.createElement('button'); el.type='button'; el.className='bflower'; el.dataset.b=i; el.title=b.title;
@@ -105,7 +117,7 @@ async function addToPile(i){
     if (el) el.animate([{filter:'brightness(1)'},{filter:'brightness(1.6)'},{filter:'brightness(1)'}],{duration:900});
     return;
   }
-  pile.push(i); savePile(); renderPile(); placePile(); bloomFlower(i);
+  pile.push(i); savePile(); recordArchive([i]); renderPile(); placePile(); bloomFlower(i);
   const el=pileEl.querySelector(`.pbook[data-b="${i}"]`); if (!el) return;
   const to=el.getBoundingClientRect(), from=headPoint();
   el.style.visibility='hidden';
@@ -431,7 +443,7 @@ function nearestPainted(css){
   return best;
 }
 let lastCamFx=-1;
-function setMask(el,k){ const v=`${cam - k*SEG}px 0`; el.style.webkitMaskPosition=v; el.style.maskPosition=v; }
+function setMask(el,k){ const v=`${cam - k*SEG - 3000}px 0`; el.style.webkitMaskPosition=v; el.style.maskPosition=v; }
 function makeSeg(k){
   const r=rng(k*7919+13);
   const seg=document.createElement('div'); seg.className='seg'; seg.dataset.k=k; seg.style.left=(k*SEG)+'px'; seg.style.width=SEG+'px';
@@ -467,7 +479,7 @@ function makeSeg(k){
   shelf.appendChild(seg); segs.set(k,seg);
 }
 function ensureSegs(){
-  const kmin=Math.max(0, Math.floor((cam-400)/SEG)), kmax=Math.ceil((cam+2000-SH_START)/SEG)-1;
+  const kmin=Math.max(0, Math.floor((cam-400)/SEG)), kmax=Math.ceil((cam+1150)/SEG)-1;
   for (const [k,el] of segs) if (k<kmin||k>kmax){ el.remove(); segs.delete(k); }
   for (let k=kmin;k<=kmax;k++) if (!segs.has(k)) makeSeg(k);
 }
@@ -477,11 +489,41 @@ function applyCam(){
   floorEl.style.backgroundPosition=`0 ${-cam}px`;
   // 언덕은 아주 천천히(시차), 안개 마스크는 화면 기준 위치에 고정. 상속되는 CSS 변수 대신 속성을 직접 바꿔 스타일 재계산을 줄임
   if (cam!==lastCamFx){ lastCamFx=cam;
-    stage.style.setProperty('background-position', `calc(50% - ${(cam*0.04).toFixed(1)}px) 100%`, 'important');
+    stage.style.setProperty('background-position', `calc(88% - ${Math.min(cam*0.04,90).toFixed(1)}px) 100%`, 'important');
     for (const [k,el] of segs) setMask(el,k);
   }
-  ensureSegs(); placePile(); placeGarden(); if (hlTarget) queueHL();
+  ensureSegs(); placePile(); placeGarden(); drawFar(); if (hlTarget) queueHL();
 }
+/* 먼 책장: 지평선까지 이어지는 책장. 진짜 책(.seg)은 가까운 곳만 만들고, 그 너머는
+   책장 한 칸을 찍어 둔 그림(assets/tex/farshelf.webp)을 원근에 맞춰 잘게 나눠 #stage 뒤쪽 캔버스에 그림 (DOM이 늘지 않아 가벼움).
+   멀수록 크림색 안개가 짙어져 지평선에서 흐려짐 */
+const FAR_FROM=380, FAR_TO=90000, FAR_TEX_LEN=SEG;       // 카메라에서 책장 따라 잰 거리(px) 구간, 그림 한 장이 나타내는 책장 길이
+const farCv=document.createElement('canvas'); farCv.id='farShelf'; farCv.setAttribute('aria-hidden','true');
+const farCtx=farCv.getContext('2d'); const farTex=new Image(); farTex.src='assets/tex/farshelf.webp';
+let farDrawn=null;
+function sizeFar(){ const d=Math.min(2,devicePixelRatio||1); farCv.width=Math.round(innerWidth*d); farCv.height=Math.round(innerHeight*d); farCtx.setTransform(d,0,0,d,0,0); farDrawn=null; drawFar(); }
+function drawFar(){
+  if (!farTex.complete || !farTex.naturalWidth) return;
+  if (farDrawn===cam) return; farDrawn=cam;
+  farCtx.clearRect(0,0,innerWidth,innerHeight);
+  const WXF=WX+DEPTH, TW=farTex.naturalWidth, TH=farTex.naturalHeight, ppx=TW/FAR_TEX_LEN;
+  const N=170, r=Math.pow(FAR_TO/FAR_FROM,1/N);
+  let d0=FAR_FROM;
+  for (let j=0;j<N;j++){
+    const d1=d0*r, z0=50-d0, z1=50-d1;
+    const a=proj(WXF,-260,z0), b=proj(WXF,FLOOR,z0), c=proj(WXF,-260,z1);
+    const w=c.x-a.x; if (w<0.25){ d0=d1; continue; }     // 책장은 화면 왼쪽에서 가운데(소실점)로 모임
+    const len=d1-d0, X=cam+d0;
+    const sw=Math.min(TW, Math.max(1,len*ppx)); let sx=((X*ppx)%TW+TW)%TW; if (sx+sw>TW) sx=Math.max(0,TW-sw);
+    farCtx.globalAlpha=1;
+    farCtx.drawImage(farTex, sx,0,sw,TH, a.x,a.y,w+0.6,b.y-a.y);
+    const haze=Math.min(.985, 1-Math.exp(-(d0-FAR_FROM)/3600));   // 멀수록 안개, 지평선 끝에서는 거의 사라짐
+    farCtx.globalAlpha=haze; farCtx.fillStyle='#efe9d6'; farCtx.fillRect(a.x,a.y,w+0.6,b.y-a.y);
+    d0=d1;
+  }
+  farCtx.globalAlpha=1;
+}
+farTex.onload=()=>{ farDrawn=null; drawFar(); };
 function spineZ(sp){
   const k=+sp.parentNode.parentNode.dataset.k;
   return ZN - (SH_START + k*SEG + 8 + sp.offsetLeft + sp.offsetWidth/2 - cam);
@@ -661,7 +703,7 @@ async function fetchAndEat(chosen){
 }
 function rollCam(dist){
   return new Promise(res=>{
-    const start=cam, t0=performance.now(), dur=Math.max(400, dist/300*1000)/SPD;
+    const start=cam, t0=performance.now(), dur=Math.max(400, Math.abs(dist)/300*1000)/SPD;
     (function step(t){
       const k=Math.min(1,(t-t0)/dur); cam=start+dist*k; applyCam();
       if (k<1) requestAnimationFrame(step); else res();
@@ -843,6 +885,162 @@ async function wake(){
   mode='idle'; showHint(); resumeIdle();
 }
 
+/* =========================================================
+   꽃 자르기 → 꽃다발: 오른쪽 가위 버튼.
+   여우가 화면 앞으로 걸어 나와 서면, 언덕의 꽃을 한 송이씩 잘라 품에 모아 꽃다발을 만들고
+   화면 너머의 사람에게 건넴. 받으면 언덕은 다시 풀밭, 먹은 책 더미도 비워짐 (먹은 책 기록은 archive.html 에 남음)
+   ========================================================= */
+const GIVE={x:60, z:ZFRONT-20};             // 꽃다발을 건네는 자리 (화면 앞 가운데)
+const PAWS=[.34,.64];                       // r_stand 그림에서 앞발(꽃다발 쥐는 곳) 위치 비율
+const BQ_LEAN=-18;                          // 품에 안았을 때 꽃다발 기울기(°): 얼굴을 덜 가리게 바깥쪽으로
+const SCISSORS='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.4 7.8 20 17.5M8.4 16.2 20 6.5"/></svg>';
+const tools=$('#tools'), snipBtn=$('#snip'), snipAsk=$('#snipAsk');
+function bouquetSVG(){   // 포장지(뒷장·앞장)와 리본. 0~100 좌표, 꽃줄기가 모이는 꼭짓점은 (50,100)
+  const P='#5B4330';
+  return {
+    back:`<svg class="bq-back" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M6 44 Q14 38 22 43 Q30 36 38 42 Q46 35 54 41 Q62 35 70 42 Q78 37 86 43 Q91 40 95 44 L58 99 L42 99 Z" fill="#d8c19b" stroke="${P}" stroke-width=".7" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`,
+    front:`<svg class="bq-front" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M90 52 Q74 50 60 57 Q52 61 46 66 L56 99 L44 99 Z" fill="#e6d6b8" stroke="${P}" stroke-width=".8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+      <path d="M10 55 Q26 52 40 58 Q50 62 56 68 L55 99 L43 99 Z" fill="#f4ebd8" stroke="${P}" stroke-width=".8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+      <path d="M22 57 Q38 62 49 80 M74 55 Q62 62 55 76" fill="none" stroke="${P}" stroke-opacity=".28" stroke-width=".6" vector-effect="non-scaling-stroke"/>
+      <path d="M42 81 Q50 85 58 81 L57.5 86 Q50 89.5 42.5 86 Z" fill="#c98f86" stroke="${P}" stroke-width=".6" vector-effect="non-scaling-stroke"/>
+      <path d="M50 83.5 Q38 74 35.5 81.5 Q38 90 50 84.5 Q62 90 64.5 81.5 Q62 74 50 83.5 Z M50 84.5 Q47 91 43 97 M50 84.5 Q53 91 58 96" fill="#d9a198" stroke="${P}" stroke-width=".7" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+    </svg>`
+  };
+}
+/* 꽃다발 그릇: 화면 좌표(#stage 밖)에 두고, 잘린 꽃이 날아와 한 송이씩 꽂힘 */
+function makeBouquet(n, H){
+  const el=document.createElement('div'); el.id='bouquet'; el.setAttribute('aria-hidden','true');
+  el.style.height=H+'px'; el.style.width=Math.round(H*.86)+'px';
+  const w=bouquetSVG(); el.innerHTML=w.back+'<div class="bq-stems"></div>'+w.front;
+  const stems=el.querySelector('.bq-stems'), slots=[];
+  const r=rng(n*97+3);
+  for (let k=0;k<n;k++){    // 가운데가 높고 바깥이 낮은 부채꼴. 줄기 끝이 모두 꼭짓점에 모임
+    const u=n===1?0:(k/(n-1))*2-1, ang=u*Math.min(34,10+n*4)+(r()*6-3);
+    const fh=H*(.86-.16*Math.abs(u)+r()*.06);
+    slots.push({ang,fh});
+  }
+  // 바깥 꽃부터 그려서 가운데 꽃이 앞에 오게
+  const order=slots.map((s,k)=>k).sort((a,b)=>Math.abs(slots[b].ang)-Math.abs(slots[a].ang));
+  for (const k of order){ const d=document.createElement('div'); d.className='bq-f'; d.dataset.k=k; stems.appendChild(d); }
+  return {el,slots};
+}
+function fillSlot(bq,k,f){       // f: 언덕의 .bflower
+  const d=bq.el.querySelector(`.bq-f[data-k="${k}"]`), s=bq.slots[k];
+  const ar=parseFloat(f.style.width)/parseFloat(f.style.height);
+  d.style.height=s.fh+'px'; d.style.width=(s.fh*ar)+'px';
+  d.style.transform=`translateX(-50%) rotate(${s.ang.toFixed(1)}deg)`;
+  d.style.backgroundImage=f.style.backgroundImage; d.style.setProperty('--c', f.style.getPropertyValue('--c'));
+  const t=f.querySelector('i'), i=document.createElement('i');
+  i.style.webkitMaskImage=t.style.webkitMaskImage; i.style.maskImage=t.style.maskImage; d.appendChild(i);
+  return d;
+}
+function snipAt(x,y){            // 꽃대 위에서 가위가 싹둑
+  const s=document.createElement('div'); s.className='snipfx'; s.innerHTML=SCISSORS;
+  s.style.left=x+'px'; s.style.top=y+'px'; document.body.appendChild(s);
+  s.animate([{transform:'translate(-50%,-50%) scale(.4) rotate(-30deg)',opacity:0},{transform:'translate(-50%,-50%) scale(1.1) rotate(8deg)',opacity:1,offset:.45},
+             {transform:'translate(-50%,-50%) scale(1) rotate(-14deg)',opacity:1,offset:.7},{transform:'translate(-50%,-50%) scale(.9) rotate(0deg)',opacity:0}],
+            {duration:560/SPD,easing:'ease-out'}).finished.then(()=>s.remove());
+}
+async function flyToBouquet(f,slotEl){
+  const a=f.getBoundingClientRect(); snipAt(a.left+a.width/2, a.bottom-a.height*.22);
+  await wait(200);
+  slotEl.style.visibility='hidden';
+  const b=slotEl.getBoundingClientRect();
+  const fly=f.cloneNode(true); fly.className='bflower flying'; fly.removeAttribute('title');
+  Object.assign(fly.style,{position:'fixed',left:a.left+'px',top:a.top+'px',width:a.width+'px',height:a.height+'px',transform:'none',display:'',zIndex:24});
+  document.body.appendChild(fly); f.style.visibility='hidden';
+  const dx=b.left+b.width/2-(a.left+a.width/2), dy=b.top+b.height/2-(a.top+a.height/2), sc=b.height/a.height;
+  const ang=+slotEl.dataset.ang+BQ_LEAN;
+  await fly.animate([{transform:'none'},
+    {transform:`translate(${dx*.5}px,${dy*.5-120}px) rotate(${ang*.5-20}deg) scale(${(1+sc)/2})`,offset:.5},
+    {transform:`translate(${dx}px,${dy}px) rotate(${ang}deg) scale(${sc})`}],
+    {duration:820/SPD,easing:'cubic-bezier(.35,.1,.3,1)',fill:'forwards'}).finished;
+  fly.remove(); slotEl.style.visibility='';
+  slotEl.animate([{transform:slotEl.style.transform+' scale(1.08)'},{transform:slotEl.style.transform}],{duration:240,transformOrigin:'50% 100%'});
+}
+function askSnip(){
+  if (mode!=='idle'){ flash('여우가 하던 일을 마치면 다시 눌러 주세요'); return; }
+  if (!pile.length){ flash('아직 핀 꽃이 없어요. 여우가 책을 먹으면 꽃이 피어요'); return; }
+  snipAsk.querySelector('.ask-n').textContent=pile.length;
+  snipAsk.hidden=false; snipBtn.setAttribute('aria-expanded','true');
+  snipAsk.querySelector('.ask-yes').focus();
+}
+function closeAsk(){ snipAsk.hidden=true; snipBtn.setAttribute('aria-expanded','false'); }
+async function cutFlowers(){
+  closeAsk();
+  if (mode!=='idle' || !pile.length) return;
+  mode='busy'; run++; following=false; stopMove(); hideHint(); tools.classList.add('off');
+  const books=pile.slice();
+  if (cam>0) await rollCam(-cam);
+  setPose('walk'); await moveTo(GIVE.x, GIVE.z, 190);
+  face('left'); setPose('stand'); await wait(450);
+  // 앞발에 꽃다발 그릇을 붙임
+  const fr=fox.getBoundingClientRect(), k=fr.width/FOXS, H=Math.round(POSES.stand.h*k*.56);
+  const paw=poseAnchor('stand',PAWS), bq=makeBouquet(books.length,H);
+  Object.assign(bq.el.style,{left:(paw.x-H*.43)+'px',top:(paw.y-H*.8)+'px',transform:`rotate(${BQ_LEAN}deg)`});
+  document.body.appendChild(bq.el);
+  bq.el.animate([{opacity:0,transform:`rotate(${BQ_LEAN}deg) scale(.6)`},{opacity:1,transform:`rotate(${BQ_LEAN}deg)`}],{duration:380/SPD,easing:'ease-out'});
+  // 꽃을 한 송이씩 잘라 꽃다발로 (가까운 꽃부터, 꽃이 많으면 더 빨리)
+  const fl=[...gardenEl.querySelectorAll('.bflower')].sort((a,b)=>+b.dataset.z-+a.dataset.z);
+  const gap=Math.max(140, Math.min(520, 3600/fl.length));
+  const jobs=fl.map((f,j)=>{ const slotEl=fillSlot(bq,j,f); slotEl.dataset.ang=bq.slots[j].ang; slotEl.style.visibility='hidden';
+    return wait(j*gap).then(()=>flyToBouquet(f,slotEl)); });
+  await Promise.all(jobs);
+  bob.animate([{transform:'translateY(0)'},{transform:'translateY(-7px)'},{transform:'none'}],{duration:420/SPD});
+  // 언덕은 다시 풀밭, 더미도 비움 (먹은 책 기록은 남음)
+  pile=[]; savePile(); renderPile(); placePile(); gardenEl.innerHTML='';
+  const bqs=readList(BOUQUET_KEY); bqs.push({t:Date.now(), b:books.map(i=>bookSlug(BOOKS[i]))}); writeList(BOUQUET_KEY,bqs);
+  await wait(650);
+  await giveBouquet(bq, books);
+  mode='idle'; tools.classList.remove('off'); showHint(); resumeIdle();
+}
+/* 화면 너머로 건네기: 꽃다발이 화면 가운데로 다가오며 커지고, 받으면 아래로(받는 사람 손으로) 내려가 사라짐 */
+function giveBouquet(bq, books){
+  return new Promise(async res=>{
+    const veil=document.createElement('div'); veil.id='giftVeil'; document.body.appendChild(veil);
+    const el=bq.el, r=el.getBoundingClientRect(), H=el.offsetHeight, W=el.offsetWidth;
+    const left=parseFloat(el.style.left), top=parseFloat(el.style.top);
+    const tH=Math.min(innerHeight*.6, innerWidth*.62), s=tH/H;
+    const dx=innerWidth/2-(left+W/2), dy=innerHeight*.7-(top+H);
+    const card=document.createElement('div'); card.id='giftCard'; card.setAttribute('role','dialog'); card.setAttribute('aria-label','여우가 건넨 꽃다발');
+    const titles=books.map(i=>BOOKS[i].title);
+    card.innerHTML=`<p class="g1">여우가 꽃다발을 건네요</p>
+      <p class="g2">책 ${books.length}권을 먹고 핀 꽃 ${books.length}송이</p>
+      <p class="g3">${titles.map(esc).join(' · ')}</p>
+      <button type="button">꽃다발 받기</button>`;
+    document.body.appendChild(card);
+    veil.animate([{opacity:0},{opacity:1}],{duration:700/SPD,fill:'forwards'});
+    await el.animate([{transform:`rotate(${BQ_LEAN}deg)`},
+      {transform:`translate(${dx}px,${dy}px) rotate(0deg) scale(${s*1.05})`,offset:.8},
+      {transform:`translate(${dx}px,${dy}px) rotate(0deg) scale(${s})`}],
+      {duration:1300/SPD,easing:'cubic-bezier(.4,0,.2,1)',fill:'forwards'}).finished;
+    card.classList.add('show');
+    const btn=card.querySelector('button'); btn.focus();
+    const sway=el.animate([{transform:`translate(${dx}px,${dy}px) rotate(-1.5deg) scale(${s})`},{transform:`translate(${dx}px,${dy}px) rotate(1.5deg) scale(${s})`}],
+      {duration:2600,iterations:Infinity,direction:'alternate',easing:'ease-in-out'});
+    if (RM) sway.cancel();
+    const take=async ()=>{
+      removeEventListener('keydown',onKey); btn.disabled=true; sway.cancel();
+      card.classList.remove('show');
+      veil.animate([{opacity:1},{opacity:0}],{duration:900/SPD,fill:'forwards'});
+      await el.animate([{transform:`translate(${dx}px,${dy}px) scale(${s})`,opacity:1},
+        {transform:`translate(${dx}px,${dy+innerHeight*.55}px) scale(${s*1.15})`,opacity:0}],
+        {duration:900/SPD,easing:'cubic-bezier(.5,0,.8,.4)',fill:'forwards'}).finished;
+      el.remove(); veil.remove(); card.remove();
+      flash('꽃다발을 받았어요. 언덕은 다시 풀밭이 됐어요');
+      res();
+    };
+    const onKey=e=>{ if (e.key==='Escape') take(); };
+    addEventListener('keydown',onKey);
+    btn.addEventListener('click',take);
+  });
+}
+snipBtn.addEventListener('click', ()=>{ snipAsk.hidden ? askSnip() : closeAsk(); });
+snipAsk.querySelector('.ask-yes').addEventListener('click', cutFlowers);
+snipAsk.querySelector('.ask-no').addEventListener('click', ()=>{ closeAsk(); snipBtn.focus(); });
+snipAsk.addEventListener('keydown', e=>{ if (e.key==='Escape'){ closeAsk(); snipBtn.focus(); } });
+
 /* 입력 */
 function pickSpine(e){
   let t=e && e.target;
@@ -883,7 +1081,7 @@ document.documentElement.addEventListener('pointerleave', ()=>{ pointerIn=false;
 addEventListener('resize', fitRoom);
 
 /* 시작 */
-function start(){ if (held.parentNode!==bob) bob.appendChild(held); if (fox.parentNode!==stage) stage.appendChild(fox); fitRoom(); Promise.all([loadBooks(), preloadFox()]).then(()=>{ document.getElementById('world').appendChild(gardenEl); document.getElementById('world').appendChild(pileEl); loadPile(); renderPile(); renderGarden(); applyCam(); intro(); loadDebug(); }); }
+function start(){ stage.insertBefore(farCv, stage.firstChild); sizeFar(); addEventListener('resize', sizeFar); if (held.parentNode!==bob) bob.appendChild(held); if (fox.parentNode!==stage) stage.appendChild(fox); fitRoom(); Promise.all([loadBooks(), preloadFox()]).then(()=>{ document.getElementById('world').appendChild(gardenEl); document.getElementById('world').appendChild(pileEl); loadPile(); renderPile(); renderGarden(); applyCam(); intro(); loadDebug(); }); }
 /* #debug 일 때만 조정 패널 스크립트를 불러옴 (없으면 패널 코드 자체가 로드되지 않음) */
 function loadDebug(){
   if (location.hash!=='#debug') return;

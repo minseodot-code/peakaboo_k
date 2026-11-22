@@ -1,15 +1,16 @@
 # 밑줄 먹는 여우 — 작업 안내
 
-독서 구절 아카이브 웹사이트. 크림색 하늘 아래 꽃밭 언덕에 끝없이 선 책장에서 티벳여우가 책을 꺼내 먹고 잠들면, 그 책의 구절이 꿈속에서 펼쳐진다.
+독서 구절 아카이브 웹사이트. 크림색 하늘 아래 너른 풀밭에 끝없이 선 책장에서 티벳여우가 책을 꺼내 먹고 잠들면, 그 책의 구절이 꿈속에서 펼쳐진다.
 
 ## 구조
 - `index.html` — 화면 뼈대
 - `css/style.css` — 방(3D), 책장, 여우, 꿈 화면 스타일
 - `js/main.js` — 모든 동작 (아래 "동작 흐름" 참고)
+- `archive.html` + `js/archive.js` + `css/archive.css` — 먹은 책 모음 페이지 (오른쪽 책 버튼). 책을 누르면 `index.html#book-제목`으로 그 꿈을 다시 엶
 - `data/books.json` — 실제 책 데이터 (title, author, tags, quotes[{t, p}], note, blog, color(선택))
   - 실제 책은 책장 0번 칸 첫 줄부터 순서대로(`.spine.real`, `data-b`=책 번호). 그 외 장식용 책을 누르면 `pickUneaten()`이 안 먹은 실제 책을 고름
 - `assets/fox/*.webp` — 여우 포즈 이미지. 모두 배경 투명, 옆모습은 왼쪽을 봄
-- `assets/meadow/` — 배경 언덕(land, #stage 배경), 꽃덤불(clump1~5, 지금은 안 씀), 꿈 밤하늘(night). 책장이 안쪽으로 사라지는 안개는 각 칸(.seg)의 mask이고 `setMask()`가 위치를 맞춤
+- `assets/meadow/` — 배경 언덕(land, #stage 배경), 꽃덤불(clump1~5, 지금은 안 씀), 꿈 밤하늘(night). 책장이 안쪽으로 사라지는 안개는 각 칸(.seg)의 mask이고 `setMask()`가 위치를 맞춤 (마스크 앞쪽 3000px은 불투명 여백: 없으면 안쪽으로 들어갈 때 책장 앞부분이 잘려 옆면과 떨어져 보임)
 - `assets/books/*.webp` — 손으로 그린 책등 그림. `js/main.js`의 `PAINTED`(파일 이름, 가로/세로 비율 ar, 평균 색 c) 목록에서 골라 책장을 채움. 새 책등을 추가하면 파일을 넣고 `PAINTED`에 한 줄 추가
 
 빌드 도구 없는 정적 사이트. 라이브러리 추가 없이 순수 HTML/CSS/JS로 유지할 것.
@@ -22,6 +23,10 @@
 5. `enterDream(book)`: 머리 쪽으로 확대 + 물감 번지듯 꿈 화면 → 구절 순서대로 등장
 6. `wake()`: 현실로 복귀 → `addToPile()`로 방금 꿈꾼 책이 입구 근처 '먹은 책 더미'로 날아가 쌓임 → 다시 대기
 - 책꽃: 먹은 책마다 언덕에 그 책 색의 꽃이 핌(`bloomFlower()`, 더미와 같은 `pile` 목록 사용). 꽃 모양·위치는 책 제목 해시로 고정(`flowerSpot()`). 그림은 `assets/flowers/f1~9.webp`, 꽃잎 마스크 `f1m~f9m.webp`(꽃잎에만 책 색을 곱함). 꽃을 누르면 `dreamAgain()`
+- 오른쪽 도구 버튼(`#tools`): 책 모양 = archive.html, 가위 = `askSnip()` → 확인 말풍선(`#snipAsk`) → `cutFlowers()`
+  - `cutFlowers()`: 여우가 화면 앞(`GIVE`)으로 나와 서고, 꽃을 한 송이씩 잘라(`flyToBouquet()`) 앞발(`PAWS`)에 든 꽃다발(`makeBouquet()`, 화면 좌표 레이어)에 꽂음 → `giveBouquet()`가 꽃다발을 화면 가운데로 크게 건넴 → '꽃다발 받기'(또는 Esc)로 받으면 아래로 내려가 사라짐. 꽃밭과 `pile`은 비워짐
+  - 기록: `peakaboo-archive`(먹은 책 slug와 처음 먹은 시각, 꽃을 잘라도 남음), `peakaboo-bouquets`(받은 꽃다발). archive.html 아래 '기록 모두 지우기'로 전부 초기화
+  - 꽃 모양은 `flowerType(slug)`(책 제목 해시)라 archive.js도 같은 꽃을 그림. 바꾸면 두 파일 모두 맞출 것
 - 먹은 책 더미: `pile`(책 번호 목록)을 `localStorage`의 `peakaboo-pile`에 책 제목 slug로 저장해 다음 방문에도 남음. 더미의 책을 누르면 `dreamAgain()`으로 그 책을 다시 꿈꿈. 위치는 `PILE`, 한 더미 최대 권수는 `PILE_PER_STACK`
 - 꿈 주소: `#book-제목`(공백→`-`, `bookSlug()`). 그 주소로 들어오면 `intro()` 대신 `openFromLink()`로 바로 꿈. 구절은 `revealOnScroll()`이 화면에 들어올 때 하나씩 띄움. 물감 색은 `tintDream()`이 책 color로 `--t1/--t3` 지정
 
@@ -41,3 +46,5 @@
 - 동작을 바꿀 때 커서 따라가기, 클릭한 책 꺼내기, 꿈 전환이 깨지지 않는지 항상 확인
 - `fetch`를 쓰므로 파일을 직접 열지 말고 로컬 서버로 확인 (`npx serve .`)
 - 접근성: 책장은 키보드(Enter/Space)로도 동작, Esc로 꿈에서 깸, `prefers-reduced-motion` 존중
+- 배경 풀밭(`assets/meadow/land.webp`): 지평선이 그림 위에서 42%(= 책장 소실점, #viewport perspective-origin)에 오도록 미드저니 그림을 옆·아래로 넓혀 만듦. 그림을 바꾸면 이 비율을 맞출 것
+- 먼 책장: 진짜 책(.seg)은 카메라에서 약 1150px까지만 만들고, 그 너머 지평선까지는 `drawFar()`가 책장 한 칸 그림(`assets/tex/farshelf.webp`)을 원근대로 잘게 나눠 #stage 맨 뒤 캔버스(#farShelf)에 그림. 멀수록 크림색 안개. 책장 모양(책·나무판)을 크게 바꾸면 이 그림도 다시 찍을 것
