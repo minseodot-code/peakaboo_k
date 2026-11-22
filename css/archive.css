@@ -22,7 +22,7 @@ header p{color:#7a6e5c;margin:0 0 36px;font-size:15px}
   display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;quotes:none}
 .txt small{color:#9a8c76;font-size:12px}
 .fl{position:relative;display:inline-block;background:50% 100%/100% 100% no-repeat}
-.fl i{position:absolute;inset:0;background:var(--c);mix-blend-mode:multiply;opacity:.85;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+.fl i{position:absolute;inset:0;background:var(--c);mix-blend-mode:color;opacity:.95;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
 #bqSec{margin-top:56px}
 #bqSec h2{font-family:'Gowun Batang',serif;font-size:22px;margin:0 0 16px}
 #bouquets{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
