@@ -644,7 +644,10 @@ function tick(t){
 requestAnimationFrame(tick);
 
 /* 클릭: 근처 책 꺼내기 → 앉기 → 펼치기 → 넘기기 → 먹기 → 잠 → 꿈 */
-async function fetchAndEat(chosen){
+/* 책 꺼내 먹기는 두 묶음: ① fetchAndSit(책장에서 꺼내 와 앉아 읽기) ② eatAndSleep(끝까지 먹고 누워 잠 → 꿈) */
+async function fetchAndEat(chosen){ const book=await fetchAndSit(chosen); await eatAndSleep(book); }
+let seatedBook=null;   // 책을 들고 앉아 있는 중(단축키 1 뒤)이면 그 책
+async function fetchAndSit(chosen){
   mode='busy'; run++; stopMove(); hideHint();
   let spine=chosen;
   if (!spine){
@@ -718,7 +721,10 @@ async function fetchAndEat(chosen){
     for (let i=0;i<3;i++){ await flipPage(); await wait(260); }
     await wait(450);
   }
-
+  return book;
+}
+async function eatAndSleep(book){
+  mode='busy'; seatedBook=null; hideHint();
   setPose('eat');
   if (ROUND && POSES.eatSteps){
     for (const n of POSES.eatSteps){ if (curImg) curImg.src=SRC(n); if (n!=='r_bookclose') crumbs(); await wait(430); }
@@ -817,8 +823,8 @@ function revealOnScroll(my){
       await wait(el.classList.contains('q') ? 900 : 380);
     }
     running=false;
-    // 첫 화면이 다 떠오르면 깨기 버튼에 포커스 (키보드 사용자가 바로 나갈 수 있게)
-    if (!focused && my===dreamSeq && mode==='dream'){ focused=true; const w=dreamInner.querySelector('#wake'); if (w) w.focus({preventScroll:true}); }
+    // 첫 화면이 다 떠오르면 깨기 버튼에 포커스 (키보드 사용자가 바로 나갈 수 있게). 메모를 쓰는 중이면 건드리지 않음
+    if (!focused && my===dreamSeq && mode==='dream' && !(document.activeElement && document.activeElement.id==='memo')){ focused=true; const w=dreamInner.querySelector('#wake'); if (w) w.focus({preventScroll:true}); }
   }
   revealIO=new IntersectionObserver(es=>{
     for (const e of es) if (e.isIntersecting){ revealIO.unobserve(e.target); queue.push(e.target); }
@@ -880,14 +886,24 @@ async function copyDreamLink(b){
   } catch(e){ flash(url); }
 }
 function esc(s){ return s.replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+/* 꿈 페이지: 제목 · 작가 · 인상 깊은 문장(페이지는 있으면) · 메모
+   메모는 이 브라우저(localStorage 'peakaboo-memo')에 책마다 저장. 처음엔 books.json 의 note 를 보여줌 */
+const MEMO_KEY='peakaboo-memo';
+function readMemos(){ try { const v=JSON.parse(localStorage.getItem(MEMO_KEY)||'{}'); return v&&typeof v==='object'?v:{}; } catch(e){ return {}; } }
+function pageLabel(p){ p=String(p||'').trim(); return !p?'':/^\d+(\s*[-~–]\s*\d+)?$/.test(p)?'p. '+p:p; }
 function renderDream(b){
+  const slug=bookSlug(b), memos=readMemos(), memo=memos[slug]!=null?memos[slug]:(b.note||'');
+  const quotes=(b.quotes||[]).filter(q=>q&&q.t);
   dreamInner.innerHTML = `
-    <p class="kicker rv">여우가 ${eaten}번째로 먹은 책 · 예시 데이터</p>
     <h1 class="dtitle rv">${esc(b.title)}</h1>
-    <p class="dauthor rv">${esc(b.author)}</p>
-    ${b.quotes.map(q=>`<blockquote class="q rv"><p>${esc(q.t)}</p><span>${esc(q.p)}</span></blockquote>`).join('')}
-    <div class="fnote rv"><small>여우의 한 줄</small><p>${esc(b.note)}</p></div>
-    <div class="tags rv">${b.tags.map(t=>`<span>#${esc(t)}</span>`).join('')}</div>
+    <p class="dauthor rv">${esc(b.author||'')}</p>
+    ${quotes.length?`<h2 class="dlabel rv">인상 깊은 문장</h2>`:''}
+    ${quotes.map(q=>{ const pg=pageLabel(q.p); return `<blockquote class="q rv"><p>${esc(q.t)}</p>${pg?`<span>${esc(pg)}</span>`:''}</blockquote>`; }).join('')}
+    <div class="dmemo rv">
+      <label class="dlabel" for="memo">메모</label>
+      <textarea id="memo" rows="3" placeholder="이 책에 대해 짧게 남겨 두세요">${esc(memo)}</textarea>
+      <small id="memoState" aria-live="polite">이 브라우저에 저장돼요</small>
+    </div>
     <div class="actions rv">
       ${b.blog?`<a href="${esc(b.blog)}" target="_blank" rel="noopener">블로그 서평 읽기</a>`:''}
       <button id="share" type="button" class="ghost">이 꿈 링크 복사</button>
@@ -895,6 +911,12 @@ function renderDream(b){
     </div>`;
   dreamInner.querySelector('#wake').addEventListener('click', wake);
   dreamInner.querySelector('#share').addEventListener('click', ()=>copyDreamLink(b));
+  const ta=dreamInner.querySelector('#memo'), st=dreamInner.querySelector('#memoState'); let tmr=0;
+  const fit=()=>{ ta.style.height='auto'; ta.style.height=Math.max(ta.scrollHeight,84)+'px'; };
+  ta.addEventListener('input', ()=>{ fit(); clearTimeout(tmr); st.textContent='저장하는 중…';
+    tmr=setTimeout(()=>{ const m=readMemos(); m[slug]=ta.value; try { localStorage.setItem(MEMO_KEY, JSON.stringify(m)); st.textContent='저장했어요'; } catch(e){ st.textContent='저장하지 못했어요'; } }, 400); });
+  ta.addEventListener('keydown', e=>{ if (e.key==='Escape'){ e.stopPropagation(); ta.blur(); } });   // 메모 중 Esc는 글쓰기만 끝냄 (한 번 더 누르면 꿈에서 깸)
+  requestAnimationFrame(fit);
 }
 
 /* 꿈에서 깨기 */
@@ -1053,6 +1075,25 @@ snipAsk.querySelector('.ask-yes').addEventListener('click', cutFlowers);
 snipAsk.querySelector('.ask-no').addEventListener('click', ()=>{ closeAsk(); snipBtn.focus(); });
 snipAsk.addEventListener('keydown', e=>{ if (e.key==='Escape'){ closeAsk(); snipBtn.focus(); } });
 
+/* 단축키 (영상 찍을 때 등 빠르게):
+   1 = 책장에서 책을 꺼내 와 앉아 읽기까지 (그 자리에서 멈춰 기다림)
+   2 = 앉아서 끝까지 먹고 누워 잠들기 → 꿈 (앉아 있지 않으면 1부터 이어서 한 번에) */
+async function shortcutSit(){
+  if (mode!=='idle') return;
+  const book=await fetchAndSit(null);
+  seatedBook=book; mode='seated'; flash('책을 들고 앉았어요 · 2를 누르면 먹어요');
+}
+async function shortcutEat(){
+  if (mode==='seated' && seatedBook) return eatAndSleep(seatedBook);
+  if (mode==='idle') return fetchAndEat(null);
+}
+addEventListener('keydown', e=>{
+  if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+  const t=e.target; if (t && (t.tagName==='TEXTAREA' || t.tagName==='INPUT' || t.isContentEditable)) return;
+  if (e.key==='1'){ e.preventDefault(); shortcutSit(); }
+  else if (e.key==='2'){ e.preventDefault(); shortcutEat(); }
+});
+
 /* 입력 */
 function pickSpine(e){
   let t=e && e.target;
@@ -1071,7 +1112,7 @@ function onShelf(e){
 }
 shelf.addEventListener('click', onShelf);
 shelf.addEventListener('keydown', e=>{ if (e.key==='Enter'||e.key===' '){ e.preventDefault(); onShelf(); } });
-addEventListener('keydown', e=>{ if (e.key==='Escape' && mode==='dream') wake(); });
+addEventListener('keydown', e=>{ if (e.key==='Escape' && mode==='dream' && !(e.target && e.target.id==='memo')) wake(); });
 addEventListener('pointermove', e=>{ if (holdForUI(e)) return; px=e.clientX; py=e.clientY; pointerIn=true; pointerMovedAt=performance.now(); if (mode==='idle' && !following) startFollow(); });
 /* 커서 아래 책 강조: 평면 레이어 하나를 그 책 위치로 옮김 (한 프레임에 한 번만) */
 const spineHL=document.createElement('div'); spineHL.id='spineHL'; stage.appendChild(spineHL);

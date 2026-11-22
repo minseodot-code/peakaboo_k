@@ -7,7 +7,7 @@
 - `css/style.css` — 방(3D), 책장, 여우, 꿈 화면 스타일
 - `js/main.js` — 모든 동작 (아래 "동작 흐름" 참고)
 - `archive.html` + `js/archive.js` + `css/archive.css` — 먹은 책 모음 페이지 (오른쪽 책 버튼). 책을 누르면 `index.html#book-제목`으로 그 꿈을 다시 엶
-- `data/books.json` — 실제 책 데이터 (title, author, tags, quotes[{t, p}], note, blog, color(선택))
+- `data/books.json` — 실제 책 데이터 (title, author, quotes[{t, p}], note, blog, color(선택)). p(페이지)는 선택: 숫자만 쓰면 'p. 24'로 보임. note는 메모 칸의 처음 내용 (tags는 지금 화면에 안 씀)
   - 실제 책은 책장 0번 칸 첫 줄부터 순서대로(`.spine.real`, `data-b`=책 번호). 그 외 장식용 책을 누르면 `pickUneaten()`이 안 먹은 실제 책을 고름
 - `assets/fox/*.webp` — 여우 포즈 이미지. 모두 배경 투명, 옆모습은 왼쪽을 봄
 - `assets/meadow/` — 배경 풀밭(field, #stage 배경), 꽃덤불(clump1~5, 지금은 안 씀), 꿈 밤하늘(night). 책장이 안쪽으로 사라지는 안개는 각 칸(.seg)의 mask이고 `setMask()`가 위치를 맞춤 (마스크 앞쪽 3000px은 불투명 여백: 없으면 안쪽으로 들어갈 때 책장 앞부분이 잘려 옆면과 떨어져 보임)
@@ -19,8 +19,9 @@
 1. `start()` → 책 데이터·이미지 미리 불러오기 → `intro()`: 오른쪽에서 기어 나와 책장 앞에 섬 (걸어오는 시간 8초, 서기까지 약 9초. 등장 중 책장을 누르면 서자마자 그 책을 꺼냄. `intro()`의 `T`로 조절)
 2. 대기: 커서가 있으면 `tick()`이 커서를 따라감, 없으면 `idle()`이 혼자 서성임. 커서가 오른쪽 버튼(둘레 90px 포함)·말풍선 위면 `uiHold`로 멈춰 섬
 3. 커서를 방 안쪽 깊이 잠깐(`DEEP_DWELL` 0.45초) 두면 `cam` 값이 커지며 책장이 끝없이 흘러옴 (`ensureSegs()`가 책장 칸을 만들고 지움)
-4. 책 클릭 → `fetchAndEat(spine)`: 걸어가서 꺼냄 → 앉아서 읽음 → 먹음 → 잠
-5. `enterDream(book)`: 머리 쪽으로 확대 + 물감 번지듯 꿈 화면 → 구절 순서대로 등장
+4. 책 클릭 → `fetchAndEat(spine)` = `fetchAndSit()`(걸어가서 꺼냄 → 앉아서 읽음) + `eatAndSleep()`(먹음 → 잠 → 꿈)
+   - 단축키: `1` = fetchAndSit 후 앉은 채 기다림(mode 'seated'), `2` = 앉아 있으면 eatAndSleep, 서 있으면 처음부터 끝까지. 메모 칸에 글 쓰는 중엔 무시
+5. `enterDream(book)`: 머리 쪽으로 확대 + 물감 번지듯 꿈 화면 → 구절 순서대로 등장. 꿈 페이지(`renderDream()`)는 제목 · 작가 · 인상 깊은 문장(페이지 선택) · 메모. 메모는 책마다 `localStorage` `peakaboo-memo`에 저장(이 브라우저에만), 모음 페이지 카드에도 보임
 6. `wake()`: 현실로 복귀 → `addToPile()`로 방금 꿈꾼 책이 입구 근처 '먹은 책 더미'로 날아가 쌓임 → 다시 대기
 - 책꽃: 먹은 책마다 언덕에 그 책 색의 꽃이 핌(`bloomFlower()`, 더미와 같은 `pile` 목록 사용). 꽃 모양·위치는 책 제목 해시로 고정(`flowerSpot()`). 그림은 `assets/flowers/f1~9.webp`, 꽃잎 마스크 `f1m~f9m.webp`(꽃잎에만 책 색을 곱함). 꽃을 누르면 `dreamAgain()`
 - 오른쪽 도구 버튼(`#tools`): 책 모양 = archive.html, 가위 = `askSnip()` → 확인 말풍선(`#snipAsk`) → `cutFlowers()`
