@@ -11,7 +11,18 @@ function bookColor(b){ return b && typeof b.color==='string' && CSS.supports('co
 function esc(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function readList(k){ try { const v=JSON.parse(localStorage.getItem(k)||'[]'); return Array.isArray(v)?v:[]; } catch(e){ return []; } }
 const dateFmt=new Intl.DateTimeFormat('ko-KR',{month:'long',day:'numeric'});
+/* 꽃 색: 책 색의 색조만 살리고 채도를 올림 (흐린 책 색을 그대로 곱하면 꽃이 시든 색이 됨).
+   꽃잎에는 mix-blend-mode:color 로 입혀서 밝기·결은 원래 꽃 그림을 따름 */
+function bloomColor(css){
+  const c=document.createElement('canvas').getContext('2d'); c.fillStyle='#b39573'; c.fillStyle=css; const h=c.fillStyle;
+  if (!/^#[0-9a-f]{6}$/i.test(h)) return css;
+  const r=parseInt(h.slice(1,3),16)/255, g=parseInt(h.slice(3,5),16)/255, b=parseInt(h.slice(5,7),16)/255;
+  const mx=Math.max(r,g,b), mn=Math.min(r,g,b), l=(mx+mn)/2, d=mx-mn; let hu=0, s=0;
+  if (d){ s=d/(1-Math.abs(2*l-1)); hu=mx===r?((g-b)/d)%6:mx===g?(b-r)/d+2:(r-g)/d+4; hu*=60; if (hu<0) hu+=360; }
+  return `hsl(${hu.toFixed(0)} ${Math.round(Math.min(.7,Math.max(.5,s*1.8))*100)}% ${Math.round(Math.min(.6,Math.max(.5,l))*100)}%)`;
+}
 function flowerHTML(slug, color, h){
+  color=bloomColor(color);
   const f=FLOWERS[hash(slug+'#flower')%FLOWERS.length], w=Math.round(h*FLOWER_AR[f]);
   return `<span class="fl" style="width:${w}px;height:${h}px;background-image:url(assets/flowers/${f}.webp);--c:${color}"><i style="-webkit-mask-image:url(assets/flowers/${f}m.webp);mask-image:url(assets/flowers/${f}m.webp)"></i></span>`;
 }

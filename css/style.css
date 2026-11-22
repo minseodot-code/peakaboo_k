@@ -248,9 +248,9 @@ html,body{background:var(--cream)}
 #stage{background:
   url(../assets/tex/paper.webp) 0 0 / 160px 160px repeat,
   linear-gradient(rgba(240,230,205,.38),rgba(240,230,205,.38)),
-  var(--cream) url(../assets/meadow/land.webp) 88% 100% / auto 100% no-repeat!important;
+  var(--cream) url(../assets/meadow/field.webp) 88% 100% / auto 100% no-repeat!important;
   background-blend-mode:normal,normal,normal!important}
-/* 풀밭 그림(land.webp)은 지평선이 그림 위에서 42%에 오도록 만들어 둠 = 책장 소실점(#viewport perspective-origin 42%)과 같은 높이.
+/* 풀밭 그림(field.webp)은 지평선이 그림 위에서 42%에 오도록 만들어 둠 = 책장 소실점(#viewport perspective-origin 42%)과 같은 높이.
    가로 88%: 오른쪽 먼 나무들이 화면 안에 들어오게. 그림 비율(2.51)보다 넓은 화면만 가로 맞춤 */
 @media (min-aspect-ratio:2510/1000){ #stage{background-size:160px 160px,auto,100% auto!important} }
 #wallL{background:none!important}
@@ -294,7 +294,7 @@ html,body{background:var(--cream)}
 /* 책꽃: 먹은 책 색으로 물든 꽃 (꽃잎만 물들이도록 꽃잎 모양 마스크 위에 책 색을 곱함) */
 #garden{position:absolute;left:0;top:0;transform-style:preserve-3d}
 .bflower{position:absolute;left:0;top:0;padding:0;border:0;background:none 50% 100%/100% 100% no-repeat;cursor:pointer;transform-origin:50% 100%}
-.bflower i{position:absolute;inset:0;background:var(--c);mix-blend-mode:multiply;opacity:.85;
+.bflower i{position:absolute;inset:0;background:var(--c);mix-blend-mode:color;opacity:.95;
   -webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;pointer-events:none}
 .bflower:hover,.bflower:focus-visible{filter:brightness(1.12) drop-shadow(0 0 6px rgba(255,236,190,.9));outline:none}
 .bflower.blooming{animation:bloom 1.6s cubic-bezier(.2,1.3,.4,1) both}
@@ -326,7 +326,7 @@ html,body{background:var(--cream)}
 #giveLayer{position:absolute;z-index:7;pointer-events:none}
 .bq-stems{position:absolute;width:0;height:0}
 .bq-f{position:absolute;left:0;bottom:0;background:50% 100%/100% 100% no-repeat;transform-origin:50% 100%}
-.bq-f i{position:absolute;inset:0;background:var(--c);mix-blend-mode:multiply;opacity:.85;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+.bq-f i{position:absolute;inset:0;background:var(--c);mix-blend-mode:color;opacity:.95;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
 .bq-front{position:absolute;inset:0;width:100%;height:100%;filter:brightness(var(--br,.94))}
 #giftAway{position:fixed;z-index:22;pointer-events:none;transform-origin:50% 60%}
 #giftAway .bq-wrapimg{position:absolute;inset:0;width:100%;height:100%}
