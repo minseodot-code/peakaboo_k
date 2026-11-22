@@ -1,0 +1,38 @@
+/* 먹은 책 모음 페이지: 언덕과 같은 크림 종이 */
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{font-family:'Gowun Dodum',sans-serif;color:#3B342A;background:linear-gradient(rgba(243,235,214,.62),rgba(243,235,214,.62)),#efe5cc url(../assets/tex/paper.webp)}
+main{max-width:980px;margin:0 auto;padding:40px 24px 64px}
+.back{display:inline-block;color:#6f6352;text-decoration:none;font-size:14px;padding:6px 0;margin-bottom:28px}
+.back:hover,.back:focus-visible{color:#3B342A;text-decoration:underline;outline:none}
+header h1{font-family:'Gowun Batang',serif;font-weight:700;font-size:clamp(28px,4vw,38px);margin:0 0 8px}
+header p{color:#7a6e5c;margin:0 0 36px;font-size:15px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px}
+.card{position:relative;display:flex;gap:14px;align-items:flex-end;padding:18px 18px 16px 22px;border-radius:14px;text-decoration:none;color:inherit;
+  background:rgba(250,245,233,.86);border:1px solid rgba(91,67,48,.25);box-shadow:0 2px 8px rgba(90,70,40,.08);transition:transform .25s,box-shadow .25s;overflow:hidden}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:7px;background:var(--c);opacity:.85}
+.card:hover,.card:focus-visible{transform:translateY(-3px);box-shadow:0 8px 20px rgba(90,70,40,.16);outline:none}
+.card:focus-visible{border-color:#8a9ba8}
+.flw{flex:none;width:56px;display:flex;justify-content:center}
+.txt{display:flex;flex-direction:column;gap:3px;min-width:0}
+.txt strong{font-family:'Gowun Batang',serif;font-size:19px}
+.txt em{font-style:normal;color:#8a7d69;font-size:13px}
+.txt q{font-family:'Gowun Batang',serif;font-size:14px;line-height:1.65;color:#4a3f32;margin:6px 0 4px;white-space:pre-line;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;quotes:none}
+.txt small{color:#9a8c76;font-size:12px}
+.fl{position:relative;display:inline-block;background:50% 100%/100% 100% no-repeat}
+.fl i{position:absolute;inset:0;background:var(--c);mix-blend-mode:multiply;opacity:.85;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+#bqSec{margin-top:56px}
+#bqSec h2{font-family:'Gowun Batang',serif;font-size:22px;margin:0 0 16px}
+#bouquets{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+#bouquets li{display:flex;align-items:flex-end;gap:16px;padding:12px 16px;border-radius:14px;background:rgba(250,245,233,.7);border:1px solid rgba(91,67,48,.18)}
+.bunch{display:flex;align-items:flex-end;min-width:100px;padding:8px 0 2px 12px}
+.bunch>span{margin:0 -9px;transform-origin:50% 100%}
+#bouquets small{color:#8a7d69;font-size:12px}
+footer{margin-top:56px;font-size:13px;color:#8a7d69}
+footer button{font-family:inherit;font-size:13px;cursor:pointer}
+.link{background:none;border:none;color:#8a7d69;text-decoration:underline;padding:0 4px}
+#clearYes{margin:0 6px 0 10px;padding:6px 14px;border-radius:999px;border:none;background:#7a3d33;color:#f3ede1}
+footer button:focus-visible{outline:2px solid #8a9ba8;outline-offset:2px}
+@media (prefers-reduced-motion:reduce){ .card{transition:none} }

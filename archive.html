@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>여우가 먹은 책 · 밑줄 먹는 여우</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/archive.css">
+</head>
+<body>
+<main>
+  <a class="back" href="index.html">← 언덕으로 돌아가기</a>
+  <header>
+    <h1>여우가 먹은 책</h1>
+    <p id="sum">기록을 불러오는 중이에요</p>
+  </header>
+  <section aria-labelledby="hBooks">
+    <h2 id="hBooks" class="sr">먹은 책 목록</h2>
+    <div id="books" class="grid"></div>
+  </section>
+  <section id="bqSec" aria-labelledby="hBq" hidden>
+    <h2 id="hBq">받은 꽃다발</h2>
+    <ul id="bouquets"></ul>
+  </section>
+  <footer>
+    <div id="clear">
+      <button type="button" class="link" id="clearAsk">기록 모두 지우기</button>
+      <span id="clearConfirm" hidden>먹은 책 기록, 받은 꽃다발, 언덕의 꽃이 모두 지워져요.
+        <button type="button" id="clearYes">지우기</button><button type="button" id="clearNo" class="link">그만두기</button></span>
+    </div>
+  </footer>
+</main>
+<script src="js/archive.js"></script>
+</body>
+</html>
