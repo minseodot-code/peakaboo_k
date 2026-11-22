@@ -24,7 +24,7 @@
 6. `wake()`: 현실로 복귀 → `addToPile()`로 방금 꿈꾼 책이 입구 근처 '먹은 책 더미'로 날아가 쌓임 → 다시 대기
 - 책꽃: 먹은 책마다 언덕에 그 책 색의 꽃이 핌(`bloomFlower()`, 더미와 같은 `pile` 목록 사용). 꽃 모양·위치는 책 제목 해시로 고정(`flowerSpot()`). 그림은 `assets/flowers/f1~9.webp`, 꽃잎 마스크 `f1m~f9m.webp`(꽃잎에만 책 색을 곱함). 꽃을 누르면 `dreamAgain()`
 - 오른쪽 도구 버튼(`#tools`): 책 모양 = archive.html, 가위 = `askSnip()` → 확인 말풍선(`#snipAsk`) → `cutFlowers()`
-  - `cutFlowers()`: 여우가 화면 앞(`GIVE`)으로 나와 서고, 꽃을 한 송이씩 잘라(`flyToBouquet()`) 앞발(`PAWS`)에 든 꽃다발(`makeBouquet()`, 화면 좌표 레이어)에 꽂음 → `giveBouquet()`가 꽃다발을 화면 가운데로 크게 건넴 → '꽃다발 받기'(또는 Esc)로 받으면 아래로 내려가 사라짐. 꽃밭과 `pile`은 비워짐
+  - `cutFlowers()`: 여우가 화면 앞(`GIVE`)으로 나와 빈 꽃다발을 든 포즈(`give` = r_give)로 서고, 꽃을 한 송이씩 잘라(`flyToBouquet()`) 꽃다발에 꽂음. 꽃은 여우 안의 층(`makeGiveLayer()`, #giveLayer)에 그려지고 그 위를 앞쪽 포장지·앞발 그림(r_give_front)이 덮음. 꽃 꽂는 점은 `GIVE_STEM`(그림 비율) → `giveBouquet()`: 카메라(#stage)가 꽃다발 쪽으로 확대 → '꽃다발 받기'(또는 Esc)로 받으면 꽃다발만(r_give_wrap + r_give_wrapfront + 꽃) 화면 아래로 내려가고 여우는 빈손(stand)으로 꾸벅. 꽃밭과 `pile`은 비워짐
   - 기록: `peakaboo-archive`(먹은 책 slug와 처음 먹은 시각, 꽃을 잘라도 남음), `peakaboo-bouquets`(받은 꽃다발). archive.html 아래 '기록 모두 지우기'로 전부 초기화
   - 꽃 모양은 `flowerType(slug)`(책 제목 해시)라 archive.js도 같은 꽃을 그림. 바꾸면 두 파일 모두 맞출 것
 - 먹은 책 더미: `pile`(책 번호 목록)을 `localStorage`의 `peakaboo-pile`에 책 제목 slug로 저장해 다음 방문에도 남음. 더미의 책을 누르면 `dreamAgain()`으로 그 책을 다시 꿈꿈. 위치는 `PILE`, 한 더미 최대 권수는 `PILE_PER_STACK`
