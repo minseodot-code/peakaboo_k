@@ -479,7 +479,7 @@ function makeSeg(k){
   shelf.appendChild(seg); segs.set(k,seg);
 }
 function ensureSegs(){
-  const kmin=Math.max(0, Math.floor((cam-400)/SEG)), kmax=Math.ceil((cam+2000-SH_START)/SEG)-1;
+  const kmin=Math.max(0, Math.floor((cam-400)/SEG)), kmax=Math.ceil((cam+1150)/SEG)-1;
   for (const [k,el] of segs) if (k<kmin||k>kmax){ el.remove(); segs.delete(k); }
   for (let k=kmin;k<=kmax;k++) if (!segs.has(k)) makeSeg(k);
 }
@@ -492,8 +492,38 @@ function applyCam(){
     stage.style.setProperty('background-position', `calc(88% - ${Math.min(cam*0.04,90).toFixed(1)}px) 100%`, 'important');
     for (const [k,el] of segs) setMask(el,k);
   }
-  ensureSegs(); placePile(); placeGarden(); if (hlTarget) queueHL();
+  ensureSegs(); placePile(); placeGarden(); drawFar(); if (hlTarget) queueHL();
 }
+/* 먼 책장: 지평선까지 이어지는 책장. 진짜 책(.seg)은 가까운 곳만 만들고, 그 너머는
+   책장 한 칸을 찍어 둔 그림(assets/tex/farshelf.webp)을 원근에 맞춰 잘게 나눠 #stage 뒤쪽 캔버스에 그림 (DOM이 늘지 않아 가벼움).
+   멀수록 크림색 안개가 짙어져 지평선에서 흐려짐 */
+const FAR_FROM=380, FAR_TO=90000, FAR_TEX_LEN=SEG;       // 카메라에서 책장 따라 잰 거리(px) 구간, 그림 한 장이 나타내는 책장 길이
+const farCv=document.createElement('canvas'); farCv.id='farShelf'; farCv.setAttribute('aria-hidden','true');
+const farCtx=farCv.getContext('2d'); const farTex=new Image(); farTex.src='assets/tex/farshelf.webp';
+let farDrawn=null;
+function sizeFar(){ const d=Math.min(2,devicePixelRatio||1); farCv.width=Math.round(innerWidth*d); farCv.height=Math.round(innerHeight*d); farCtx.setTransform(d,0,0,d,0,0); farDrawn=null; drawFar(); }
+function drawFar(){
+  if (!farTex.complete || !farTex.naturalWidth) return;
+  if (farDrawn===cam) return; farDrawn=cam;
+  farCtx.clearRect(0,0,innerWidth,innerHeight);
+  const WXF=WX+DEPTH, TW=farTex.naturalWidth, TH=farTex.naturalHeight, ppx=TW/FAR_TEX_LEN;
+  const N=170, r=Math.pow(FAR_TO/FAR_FROM,1/N);
+  let d0=FAR_FROM;
+  for (let j=0;j<N;j++){
+    const d1=d0*r, z0=50-d0, z1=50-d1;
+    const a=proj(WXF,-260,z0), b=proj(WXF,FLOOR,z0), c=proj(WXF,-260,z1);
+    const w=c.x-a.x; if (w<0.25){ d0=d1; continue; }     // 책장은 화면 왼쪽에서 가운데(소실점)로 모임
+    const len=d1-d0, X=cam+d0;
+    const sw=Math.min(TW, Math.max(1,len*ppx)); let sx=((X*ppx)%TW+TW)%TW; if (sx+sw>TW) sx=Math.max(0,TW-sw);
+    farCtx.globalAlpha=1;
+    farCtx.drawImage(farTex, sx,0,sw,TH, a.x,a.y,w+0.6,b.y-a.y);
+    const haze=Math.min(.985, 1-Math.exp(-(d0-FAR_FROM)/3600));   // 멀수록 안개, 지평선 끝에서는 거의 사라짐
+    farCtx.globalAlpha=haze; farCtx.fillStyle='#efe9d6'; farCtx.fillRect(a.x,a.y,w+0.6,b.y-a.y);
+    d0=d1;
+  }
+  farCtx.globalAlpha=1;
+}
+farTex.onload=()=>{ farDrawn=null; drawFar(); };
 function spineZ(sp){
   const k=+sp.parentNode.parentNode.dataset.k;
   return ZN - (SH_START + k*SEG + 8 + sp.offsetLeft + sp.offsetWidth/2 - cam);
@@ -1051,7 +1081,7 @@ document.documentElement.addEventListener('pointerleave', ()=>{ pointerIn=false;
 addEventListener('resize', fitRoom);
 
 /* 시작 */
-function start(){ if (held.parentNode!==bob) bob.appendChild(held); if (fox.parentNode!==stage) stage.appendChild(fox); fitRoom(); Promise.all([loadBooks(), preloadFox()]).then(()=>{ document.getElementById('world').appendChild(gardenEl); document.getElementById('world').appendChild(pileEl); loadPile(); renderPile(); renderGarden(); applyCam(); intro(); loadDebug(); }); }
+function start(){ stage.insertBefore(farCv, stage.firstChild); sizeFar(); addEventListener('resize', sizeFar); if (held.parentNode!==bob) bob.appendChild(held); if (fox.parentNode!==stage) stage.appendChild(fox); fitRoom(); Promise.all([loadBooks(), preloadFox()]).then(()=>{ document.getElementById('world').appendChild(gardenEl); document.getElementById('world').appendChild(pileEl); loadPile(); renderPile(); renderGarden(); applyCam(); intro(); loadDebug(); }); }
 /* #debug 일 때만 조정 패널 스크립트를 불러옴 (없으면 패널 코드 자체가 로드되지 않음) */
 function loadDebug(){
   if (location.hash!=='#debug') return;

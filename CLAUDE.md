@@ -47,3 +47,4 @@
 - `fetch`를 쓰므로 파일을 직접 열지 말고 로컬 서버로 확인 (`npx serve .`)
 - 접근성: 책장은 키보드(Enter/Space)로도 동작, Esc로 꿈에서 깸, `prefers-reduced-motion` 존중
 - 배경 풀밭(`assets/meadow/land.webp`): 지평선이 그림 위에서 42%(= 책장 소실점, #viewport perspective-origin)에 오도록 미드저니 그림을 옆·아래로 넓혀 만듦. 그림을 바꾸면 이 비율을 맞출 것
+- 먼 책장: 진짜 책(.seg)은 카메라에서 약 1150px까지만 만들고, 그 너머 지평선까지는 `drawFar()`가 책장 한 칸 그림(`assets/tex/farshelf.webp`)을 원근대로 잘게 나눠 #stage 맨 뒤 캔버스(#farShelf)에 그림. 멀수록 크림색 안개. 책장 모양(책·나무판)을 크게 바꾸면 이 그림도 다시 찍을 것
