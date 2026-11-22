@@ -6,6 +6,7 @@
 - `index.html` — 화면 뼈대
 - `css/style.css` — 방(3D), 책장, 여우, 꿈 화면 스타일
 - `js/main.js` — 모든 동작 (아래 "동작 흐름" 참고)
+- `js/share.js` — 보기 전용 링크(`?view=`): 주인 화면의 링크 버튼(`#shareView`)이 지금 브라우저의 먹은 책·기록·메모·꽃다발을 압축해 주소에 담음(`makeViewLink()`). 그 주소로 열면 `VIEW`=true: 그 내용만 읽고 아무것도 저장하지 않음, 책 먹기·단축키·꽃 자르기·메모 쓰기 없음, 꽃·더미·모음 페이지로 꿈 보기만(`setupViewMode()`). 링크는 만든 순간의 스냅숏. 페이지 주소는 `./`, `archive`처럼 .html 없이 (서버가 .html 주소를 넘기며 ?view= 를 버림)
 - `archive.html` + `js/archive.js` + `css/archive.css` — 먹은 책 모음 페이지 (오른쪽 책 버튼). 책을 누르면 `index.html#book-제목`으로 그 꿈을 다시 엶
 - `data/books.json` — 실제 책 데이터 (title, author, quotes[{t, p}], note, blog, color(선택)). p(페이지)는 선택: 숫자만 쓰면 'p. 24'로 보임. note는 메모 칸의 처음 내용 (tags는 지금 화면에 안 씀)
   - 실제 책은 책장 0번 칸 첫 줄부터 순서대로(`.spine.real`, `data-b`=책 번호). 그 외 장식용 책을 누르면 `pickUneaten()`이 안 먹은 실제 책을 고름

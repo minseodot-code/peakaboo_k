@@ -360,3 +360,9 @@ html,body{background:var(--cream)}
 #memo::placeholder{color:var(--muted);opacity:.8}
 #memo:focus{outline:none;border-color:rgba(243,236,220,.6);background:rgba(18,24,44,.42)}
 #memoState{display:block;margin-top:8px;font-size:12px;color:var(--muted)}
+
+/* 보기 전용 링크 (?view=) */
+.tool[hidden]{display:none}
+body.view-only #shelf{cursor:default}
+body.view-only #spineHL{display:none}
+.memo-view{margin:0;font-family:'Gowun Batang',serif;font-size:17px;line-height:1.8;white-space:pre-line;color:var(--ink)}
