@@ -275,11 +275,13 @@ html,body{background:var(--cream)}
    밤하늘 그림은 assets/meadow/night.webp (지금은 임시로 만든 별밤. 미드저니 그림으로 교체 예정) */
 #ink{
   --ink:#f3ecdc; --muted:#b9b2c8;
-  background:#141a33 url(../assets/meadow/night.webp) 50% 0 / cover fixed!important;
+  /* 밤하늘 그림 아래쪽이 밝아서, 글자가 읽히도록 아래로 갈수록 짙은 밤색을 덮음 */
+  background:linear-gradient(180deg,rgba(12,26,30,.15) 0%,rgba(12,26,30,.35) 45%,rgba(14,24,30,.72) 100%) fixed,
+    #10232a url(../assets/meadow/night.webp) 50% 0 / cover fixed!important;
   color:var(--ink);
 }
 #ink .blob{mix-blend-mode:screen;opacity:.55}
-#ink .blob.b2{background:radial-gradient(circle at 50% 50%,rgba(120,140,220,.30),transparent 65%)}
+#ink .blob.b2{background:radial-gradient(circle at 50% 50%,rgba(120,190,180,.26),transparent 65%)}
 #ink .fnote{border-top-color:rgba(243,236,220,.22)}
 #ink .tags span{background:rgba(243,236,220,.12);color:#efe6d2}
 #ink .actions a,#ink .actions button.ghost{border-color:rgba(243,236,220,.4);color:var(--ink)}
