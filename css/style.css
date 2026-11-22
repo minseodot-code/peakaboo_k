@@ -287,3 +287,13 @@ html,body{background:var(--cream)}
 #ink .actions a,#ink .actions button.ghost{border-color:rgba(243,236,220,.4);color:var(--ink)}
 #ink .actions button:not(.ghost){background:#f3ecdc;color:#1d2340}
 #ink .q p{text-shadow:0 0 18px rgba(255,240,200,.18)}
+
+/* 책꽃: 먹은 책 색으로 물든 꽃 (꽃잎만 물들이도록 꽃잎 모양 마스크 위에 책 색을 곱함) */
+#garden{position:absolute;left:0;top:0;transform-style:preserve-3d}
+.bflower{position:absolute;left:0;top:0;padding:0;border:0;background:none 50% 100%/100% 100% no-repeat;cursor:pointer;transform-origin:50% 100%}
+.bflower i{position:absolute;inset:0;background:var(--c);mix-blend-mode:multiply;opacity:.85;
+  -webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;pointer-events:none}
+.bflower:hover,.bflower:focus-visible{filter:brightness(1.12) drop-shadow(0 0 6px rgba(255,236,190,.9));outline:none}
+.bflower.blooming{animation:bloom 1.6s cubic-bezier(.2,1.3,.4,1) both}
+@keyframes bloom{0%{clip-path:inset(100% 0 0 0);filter:brightness(1.6)}60%{clip-path:inset(0 0 0 0)}100%{clip-path:inset(0 0 0 0);filter:brightness(1)}}
+@media (prefers-reduced-motion:reduce){ .bflower.blooming{animation:none} }
