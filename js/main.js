@@ -574,6 +574,18 @@ async function idle(){
 
 /* 커서 따라가기 */
 let following=false, pointerIn=false, px=0, py=0, lastT=0, stillSince=0;
+/* 커서가 오른쪽 버튼·말풍선 같은 화면 UI 위에 있으면 여우는 따라가지 않고 그 자리에 멈춰 섬
+   (버튼이 지평선 근처라 그대로 따라가면 '아주 먼 안쪽'으로 읽혀 책장이 계속 흘러갔음) */
+const UI_SEL='#tools, #giftCard, #toast';
+let uiHold=false, deepSince=0; const DEEP_DWELL=450;
+function holdForUI(e){
+  let on=!!(e.target && e.target.closest && e.target.closest(UI_SEL));
+  if (!on && typeof tools!=='undefined'){   // 버튼 둘레 90px도 포함: 버튼으로 다가가는 길에 여우가 뛰쳐나가지 않게
+    const r=tools.getBoundingClientRect();
+    on = e.clientX>r.left-90 && e.clientY>r.top-90 && e.clientY<r.bottom+90;
+  }
+  return uiHold=on;
+}
 const REST_AFTER=10000;        // 커서가 이만큼(ms) 안 움직이면 앉아서 쉼
 let pointerMovedAt=0;          // 마지막으로 커서가 움직인 시각
 let reachKind='reach', reachSwapAt=0;  // 책장 앞에 멈춰 있는 동안 서서/앉아서 뒤적이기를 번갈아 고름
@@ -600,10 +612,17 @@ function tick(t){
     return;
   }
   if (mode!=='idle' || !following) return;
+  if (uiHold || !snipAsk.hidden){            // 버튼 위·말풍선이 열린 동안: 부드럽게 멈춰 서서 기다림
+    const r=advance(x,z,170,dt);
+    if (r.moved>0.05) stillSince=t; else if (t-stillSince>140 && pose!=='stand' && pose!=='rest') setPose('stand');
+    return;
+  }
   const g=screenToTarget(px,py);
   let tx=g.x==null?x:Math.min(Math.max(g.x,FX),470), tz=g.z, scroll=0;
-  if (tz<ZDEEP){ scroll=Math.min(1,(ZDEEP-tz)/450); tz=ZDEEP; }
-  else if (tz>ZFRONT){ if (cam>0 && tz>ZFRONT+120) scroll=-Math.min(1,(tz-ZFRONT-120)/250); tz=ZFRONT; }
+  // 안쪽으로 들어가기는 커서가 깊은 곳에 잠깐(DEEP_DWELL) 머물렀을 때만: 버튼 쪽으로 가다 스쳐 지나가면 책장이 흐르지 않음
+  if (tz<ZDEEP){ if (!deepSince) deepSince=t; if (t-deepSince>DEEP_DWELL/SPD) scroll=Math.min(1,(ZDEEP-tz)/450); tz=ZDEEP; }
+  else if (tz>ZFRONT){ deepSince=0; if (cam>0 && tz>ZFRONT+120) scroll=-Math.min(1,(tz-ZFRONT-120)/250); tz=ZFRONT; }
+  else deepSince=0;
   const r=advance(tx,tz,170,dt);
   let moving=r.moved>0.05;
   if (scroll && (scroll>0 || cam>0)){
@@ -1053,7 +1072,7 @@ function onShelf(e){
 shelf.addEventListener('click', onShelf);
 shelf.addEventListener('keydown', e=>{ if (e.key==='Enter'||e.key===' '){ e.preventDefault(); onShelf(); } });
 addEventListener('keydown', e=>{ if (e.key==='Escape' && mode==='dream') wake(); });
-addEventListener('pointermove', e=>{ px=e.clientX; py=e.clientY; pointerIn=true; pointerMovedAt=performance.now(); if (mode==='idle' && !following) startFollow(); });
+addEventListener('pointermove', e=>{ if (holdForUI(e)) return; px=e.clientX; py=e.clientY; pointerIn=true; pointerMovedAt=performance.now(); if (mode==='idle' && !following) startFollow(); });
 /* 커서 아래 책 강조: 평면 레이어 하나를 그 책 위치로 옮김 (한 프레임에 한 번만) */
 const spineHL=document.createElement('div'); spineHL.id='spineHL'; stage.appendChild(spineHL);
 let hlTarget=null, hlQueued=false;
@@ -1068,7 +1087,7 @@ function updateHL(){
 function queueHL(){ if (!hlQueued){ hlQueued=true; requestAnimationFrame(updateHL); } }
 shelf.addEventListener('pointerover', e=>{ hlTarget=(e.target.closest && e.target.closest('.spine'))||null; queueHL(); });
 shelf.addEventListener('pointerleave', ()=>{ hlTarget=null; spineHL.classList.remove('on'); });
-addEventListener('pointerdown', e=>{ px=e.clientX; py=e.clientY; pointerIn=true; pointerMovedAt=performance.now(); if (mode==='idle' && !following) startFollow(); });
+addEventListener('pointerdown', e=>{ if (holdForUI(e)) return; px=e.clientX; py=e.clientY; pointerIn=true; pointerMovedAt=performance.now(); if (mode==='idle' && !following) startFollow(); });
 document.documentElement.addEventListener('pointerleave', ()=>{ pointerIn=false; if (following){ following=false; if (mode==='idle') idle(); } });
 
 addEventListener('resize', fitRoom);
