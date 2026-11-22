@@ -477,7 +477,7 @@ function applyCam(){
   floorEl.style.backgroundPosition=`0 ${-cam}px`;
   // 언덕은 아주 천천히(시차), 안개 마스크는 화면 기준 위치에 고정. 상속되는 CSS 변수 대신 속성을 직접 바꿔 스타일 재계산을 줄임
   if (cam!==lastCamFx){ lastCamFx=cam;
-    stage.style.setProperty('background-position', `calc(50% - ${(cam*0.04).toFixed(1)}px) 100%`, 'important');
+    stage.style.setProperty('background-position', `calc(88% - ${Math.min(cam*0.04,90).toFixed(1)}px) 100%`, 'important');
     for (const [k,el] of segs) setMask(el,k);
   }
   ensureSegs(); placePile(); placeGarden(); if (hlTarget) queueHL();

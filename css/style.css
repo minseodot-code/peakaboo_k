@@ -241,16 +241,18 @@ svg .head{transform-box:fill-box;transform-origin:50% 100%}
 
 /* ===================== 꽃밭 언덕 테마 =====================
    벽·천장 없이 크림색 하늘 아래 언덕과 꽃밭이 펼쳐진 곳에 책장이 끝없이 서 있음.
-   언덕(#stage 배경)은 2D 그림 한 장이라 가볍고, 책장 안쪽은 크림색 안개로 흐려짐 */
+   풀밭(#stage 배경)은 2D 그림 한 장이라 가볍고, 책장 안쪽은 크림색 안개로 흐려짐 */
 :root{--cream:#f4f1e6}
 html,body{background:var(--cream)}
-/* 언덕 위에 크림 종이색을 한 겹 덮고 종이 결을 얹음 (하늘이 하얗게 비던 것을 크림 종이처럼) */
+/* 풀밭 위에 크림 종이색을 한 겹 덮고 종이 결을 얹음 (하늘이 하얗게 비던 것을 크림 종이처럼) */
 #stage{background:
   url(../assets/tex/paper.webp) 0 0 / 160px 160px repeat,
   linear-gradient(rgba(240,230,205,.38),rgba(240,230,205,.38)),
-  var(--cream) url(../assets/meadow/land.webp) 50% 100% / auto 100% no-repeat!important;
+  var(--cream) url(../assets/meadow/land.webp) 88% 100% / auto 100% no-repeat!important;
   background-blend-mode:normal,normal,normal!important}
-@media (min-aspect-ratio:2976/1000){ #stage{background-size:160px 160px,auto,100% auto!important} }
+/* 풀밭 그림(land.webp)은 지평선이 그림 위에서 42%에 오도록 만들어 둠 = 책장 소실점(#viewport perspective-origin 42%)과 같은 높이.
+   가로 88%: 오른쪽 먼 나무들이 화면 안에 들어오게. 그림 비율(2.51)보다 넓은 화면만 가로 맞춤 */
+@media (min-aspect-ratio:2510/1000){ #stage{background-size:160px 160px,auto,100% auto!important} }
 #wallL{background:none!important}
 #ceilP,#wallR,#backP{display:none}
 #floorP{background:none!important}
