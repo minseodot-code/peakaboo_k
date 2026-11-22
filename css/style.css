@@ -238,3 +238,62 @@ svg .head{transform-box:fill-box;transform-origin:50% 100%}
 
 /* 꿈 화면이 닫혀 있을 때는 물감 번짐 애니메이션을 멈춤 (안 보이는데 계속 그려서 성능 낭비) */
 #dream:not(.active) .blob{animation-play-state:paused}
+
+/* ===================== 꽃밭 언덕 테마 =====================
+   벽·천장 없이 크림색 하늘 아래 언덕과 꽃밭이 펼쳐진 곳에 책장이 끝없이 서 있음.
+   언덕(#stage 배경)은 2D 그림 한 장이라 가볍고, 책장 안쪽은 크림색 안개로 흐려짐 */
+:root{--cream:#f4f1e6}
+html,body{background:var(--cream)}
+/* 언덕 위에 크림 종이색을 한 겹 덮고 종이 결을 얹음 (하늘이 하얗게 비던 것을 크림 종이처럼) */
+#stage{background:
+  url(../assets/tex/paper.webp) 0 0 / 160px 160px repeat,
+  linear-gradient(rgba(240,230,205,.38),rgba(240,230,205,.38)),
+  var(--cream) url(../assets/meadow/land.webp) 50% 100% / auto 100% no-repeat!important;
+  background-blend-mode:normal,normal,normal!important}
+@media (min-aspect-ratio:2976/1000){ #stage{background-size:160px 160px,auto,100% auto!important} }
+#wallL{background:none!important}
+#ceilP,#wallR,#backP{display:none}
+#floorP{background:none!important}
+#floorFade,#floorGlow{display:none}
+#wallShadow{display:none}
+#fog{display:none}
+/* 책장이 안쪽으로 갈수록 안개 속으로 사라짐: 각 칸(.seg)에 마스크. 위치는 applyCam()이 --mx로 맞춤 */
+.seg{-webkit-mask-image:linear-gradient(90deg,#000 0,#000 260px,rgba(0,0,0,.55) 620px,rgba(0,0,0,.15) 900px,transparent 1150px);
+  mask-image:linear-gradient(90deg,#000 0,#000 260px,rgba(0,0,0,.55) 620px,rgba(0,0,0,.15) 900px,transparent 1150px);
+  -webkit-mask-size:1400px 100%;mask-size:1400px 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+  -webkit-mask-position:0 0;mask-position:0 0}
+#fox::before{display:none}
+#fox::after{background:rgba(80,92,60,.32)!important;filter:blur(5px)!important}
+#label,#note{color:#7a6e60!important}
+#hint{color:#5f5446!important;background:rgba(244,241,230,.82);padding:6px 14px;border-radius:999px}
+.plabel{color:#7a6e60!important}
+.zz{color:#8a7f70!important}
+/* 책장 발치·앞 풀밭에 서 있는 꽃덤불 */
+.clump{position:absolute;bottom:0;pointer-events:none;background-size:contain;background-repeat:no-repeat;background-position:50% 100%;transform-origin:50% 100%}
+
+/* ===================== 꿈: 별이 뜬 밤하늘 =====================
+   밤하늘 그림은 assets/meadow/night.webp (지금은 임시로 만든 별밤. 미드저니 그림으로 교체 예정) */
+#ink{
+  --ink:#f3ecdc; --muted:#b9b2c8;
+  /* 밤하늘 그림 아래쪽이 밝아서, 글자가 읽히도록 아래로 갈수록 짙은 밤색을 덮음 */
+  background:linear-gradient(180deg,rgba(12,26,30,.15) 0%,rgba(12,26,30,.35) 45%,rgba(14,24,30,.72) 100%) fixed,
+    #10232a url(../assets/meadow/night.webp) 50% 0 / cover fixed!important;
+  color:var(--ink);
+}
+#ink .blob{mix-blend-mode:screen;opacity:.55}
+#ink .blob.b2{background:radial-gradient(circle at 50% 50%,rgba(120,190,180,.26),transparent 65%)}
+#ink .fnote{border-top-color:rgba(243,236,220,.22)}
+#ink .tags span{background:rgba(243,236,220,.12);color:#efe6d2}
+#ink .actions a,#ink .actions button.ghost{border-color:rgba(243,236,220,.4);color:var(--ink)}
+#ink .actions button:not(.ghost){background:#f3ecdc;color:#1d2340}
+#ink .q p{text-shadow:0 0 18px rgba(255,240,200,.18)}
+
+/* 책꽃: 먹은 책 색으로 물든 꽃 (꽃잎만 물들이도록 꽃잎 모양 마스크 위에 책 색을 곱함) */
+#garden{position:absolute;left:0;top:0;transform-style:preserve-3d}
+.bflower{position:absolute;left:0;top:0;padding:0;border:0;background:none 50% 100%/100% 100% no-repeat;cursor:pointer;transform-origin:50% 100%}
+.bflower i{position:absolute;inset:0;background:var(--c);mix-blend-mode:multiply;opacity:.85;
+  -webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;pointer-events:none}
+.bflower:hover,.bflower:focus-visible{filter:brightness(1.12) drop-shadow(0 0 6px rgba(255,236,190,.9));outline:none}
+.bflower.blooming{animation:bloom 1.6s cubic-bezier(.2,1.3,.4,1) both}
+@keyframes bloom{0%{clip-path:inset(100% 0 0 0);filter:brightness(1.6)}60%{clip-path:inset(0 0 0 0)}100%{clip-path:inset(0 0 0 0);filter:brightness(1)}}
+@media (prefers-reduced-motion:reduce){ .bflower.blooming{animation:none} }

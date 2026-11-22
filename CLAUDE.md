@@ -1,6 +1,6 @@
 # 밑줄 먹는 여우 — 작업 안내
 
-독서 구절 아카이브 웹사이트. 어두운 서재에서 티벳여우가 책을 꺼내 먹고 잠들면, 그 책의 구절이 꿈속에서 펼쳐진다.
+독서 구절 아카이브 웹사이트. 크림색 하늘 아래 꽃밭 언덕에 끝없이 선 책장에서 티벳여우가 책을 꺼내 먹고 잠들면, 그 책의 구절이 꿈속에서 펼쳐진다.
 
 ## 구조
 - `index.html` — 화면 뼈대
@@ -9,6 +9,7 @@
 - `data/books.json` — 실제 책 데이터 (title, author, tags, quotes[{t, p}], note, blog, color(선택))
   - 실제 책은 책장 0번 칸 첫 줄부터 순서대로(`.spine.real`, `data-b`=책 번호). 그 외 장식용 책을 누르면 `pickUneaten()`이 안 먹은 실제 책을 고름
 - `assets/fox/*.webp` — 여우 포즈 이미지. 모두 배경 투명, 옆모습은 왼쪽을 봄
+- `assets/meadow/` — 배경 언덕(land, #stage 배경), 꽃덤불(clump1~5, 지금은 안 씀), 꿈 밤하늘(night). 책장이 안쪽으로 사라지는 안개는 각 칸(.seg)의 mask이고 `setMask()`가 위치를 맞춤
 - `assets/books/*.webp` — 손으로 그린 책등 그림. `js/main.js`의 `PAINTED`(파일 이름, 가로/세로 비율 ar, 평균 색 c) 목록에서 골라 책장을 채움. 새 책등을 추가하면 파일을 넣고 `PAINTED`에 한 줄 추가
 
 빌드 도구 없는 정적 사이트. 라이브러리 추가 없이 순수 HTML/CSS/JS로 유지할 것.
@@ -20,6 +21,7 @@
 4. 책 클릭 → `fetchAndEat(spine)`: 걸어가서 꺼냄 → 앉아서 읽음 → 먹음 → 잠
 5. `enterDream(book)`: 머리 쪽으로 확대 + 물감 번지듯 꿈 화면 → 구절 순서대로 등장
 6. `wake()`: 현실로 복귀 → `addToPile()`로 방금 꿈꾼 책이 입구 근처 '먹은 책 더미'로 날아가 쌓임 → 다시 대기
+- 책꽃: 먹은 책마다 언덕에 그 책 색의 꽃이 핌(`bloomFlower()`, 더미와 같은 `pile` 목록 사용). 꽃 모양·위치는 책 제목 해시로 고정(`flowerSpot()`). 그림은 `assets/flowers/f1~9.webp`, 꽃잎 마스크 `f1m~f9m.webp`(꽃잎에만 책 색을 곱함). 꽃을 누르면 `dreamAgain()`
 - 먹은 책 더미: `pile`(책 번호 목록)을 `localStorage`의 `peakaboo-pile`에 책 제목 slug로 저장해 다음 방문에도 남음. 더미의 책을 누르면 `dreamAgain()`으로 그 책을 다시 꿈꿈. 위치는 `PILE`, 한 더미 최대 권수는 `PILE_PER_STACK`
 - 꿈 주소: `#book-제목`(공백→`-`, `bookSlug()`). 그 주소로 들어오면 `intro()` 대신 `openFromLink()`로 바로 꿈. 구절은 `revealOnScroll()`이 화면에 들어올 때 하나씩 띄움. 물감 색은 `tintDream()`이 책 color로 `--t1/--t3` 지정
 

@@ -62,6 +62,42 @@ function placePile(){
   pileEl.style.display = (pz>520 || !pile.length) ? 'none' : '';
   pileEl.style.transform=`translate3d(${PILE.x-150}px,${FLOOR-420}px,${pz}px)`;
 }
+/* 책꽃: 여우가 먹은 책마다 언덕에 그 책 색의 꽃이 한 송이 핌. 먹은 책 더미(pile)와 같은 목록을 써서 다음에 와도 남아 있음.
+   꽃 모양·위치는 책 제목으로 정해져서 늘 같은 자리에 같은 꽃이 핌. 꽃을 누르면 그 책을 다시 꿈꿈 */
+const FLOWERS=[{"f": "f1", "ar": 0.493}, {"f": "f2", "ar": 0.31}, {"f": "f3", "ar": 0.403}, {"f": "f4", "ar": 0.303}, {"f": "f5", "ar": 0.923}, {"f": "f6", "ar": 0.573}, {"f": "f7", "ar": 0.863}, {"f": "f8", "ar": 0.43}, {"f": "f9", "ar": 0.947}];
+const gardenEl=document.createElement('div'); gardenEl.id='garden';
+function hash(str){ let h=2166136261; for (const ch of str){ h^=ch.charCodeAt(0); h=Math.imul(h,16777619); } return h>>>0; }
+function flowerSpot(i){
+  const r=rng(hash(bookSlug(BOOKS[i]))); let x,z,t=0;
+  do { x=-300+r()*860; z=-650+r()*820; t++; }
+  while (t<20 && (Math.hypot(x-PILE.x,z-PILE.z)<220 || Math.hypot(x-SEAT.x,z-SEAT.z)<130));
+  return {x,z,type:FLOWERS[Math.floor(r()*FLOWERS.length)],h:Math.round(100+r()*45),tilt:(r()*8-4).toFixed(1)};
+}
+function makeFlower(i){
+  const sp=flowerSpot(i), b=BOOKS[i], w=Math.round(sp.h*sp.type.ar);
+  const el=document.createElement('button'); el.type='button'; el.className='bflower'; el.dataset.b=i; el.title=b.title;
+  el.setAttribute('aria-label',`${b.title} 꽃: 다시 꿈꾸기`);
+  el.style.width=w+'px'; el.style.height=sp.h+'px';
+  el.style.backgroundImage=`url(assets/flowers/${sp.type.f}.webp)`;
+  el.style.setProperty('--c', bookColor(b)||PALETTE[(i*5)%PALETTE.length]);
+  el.dataset.x=sp.x; el.dataset.z=sp.z; el.dataset.tilt=sp.tilt;
+  const tint=document.createElement('i'); const mu=`url(assets/flowers/${sp.type.f}m.webp)`;
+  tint.style.webkitMaskImage=mu; tint.style.maskImage=mu; el.appendChild(tint);   // 꽃잎 모양대로 책 색을 입힘
+  return el;
+}
+function placeGarden(){
+  for (const el of gardenEl.children){
+    const z=+el.dataset.z+cam, w=parseFloat(el.style.width), h=parseFloat(el.style.height);
+    el.style.display = z>600 ? 'none' : '';
+    el.style.transform=`translate3d(${(+el.dataset.x-w/2).toFixed(1)}px,${(FLOOR-h).toFixed(1)}px,${z.toFixed(1)}px) rotate(${el.dataset.tilt}deg)`;
+  }
+}
+function renderGarden(){ gardenEl.innerHTML=''; for (const i of pile) gardenEl.appendChild(makeFlower(i)); placeGarden(); }
+function bloomFlower(i){
+  const el=makeFlower(i); gardenEl.appendChild(el); placeGarden();
+  el.classList.add('blooming'); setTimeout(()=>el.classList.remove('blooming'), 1700/SPD);
+}
+gardenEl.addEventListener('click', e=>{ const f=e.target.closest('.bflower'); if (f) dreamAgain(+f.dataset.b); });
 async function addToPile(i){
   if (i==null) return;
   if (pile.includes(i)){                     // 이미 쌓인 책이면 그 책만 살짝 반짝
@@ -69,7 +105,7 @@ async function addToPile(i){
     if (el) el.animate([{filter:'brightness(1)'},{filter:'brightness(1.6)'},{filter:'brightness(1)'}],{duration:900});
     return;
   }
-  pile.push(i); savePile(); renderPile(); placePile();
+  pile.push(i); savePile(); renderPile(); placePile(); bloomFlower(i);
   const el=pileEl.querySelector(`.pbook[data-b="${i}"]`); if (!el) return;
   const to=el.getBoundingClientRect(), from=headPoint();
   el.style.visibility='hidden';
@@ -212,7 +248,7 @@ function tf(px,pz){
   return `translate3d(${(b.x-FOXS/2*b.s).toFixed(2)}px,${(b.y-FOXS*b.s).toFixed(2)}px,0) scale(${b.s.toFixed(4)})`;
 }
 let lastBr='';
-function place(nx,nz=z){ x=nx; z=nz; fox.style.transform=tf(x,z); const br=(Math.round(Math.max(.5,Math.min(.97,.94+z*.0007))*50)/50).toFixed(2); if (br!==lastBr){ lastBr=br; fox.style.setProperty('--br', br); } }   // 밝기는 0.02 단위로만 바꿔 다시 그리기를 줄임
+function place(nx,nz=z){ x=nx; z=nz; fox.style.transform=tf(x,z); const br=(Math.round(Math.max(.9,Math.min(1,.98+z*.0002))*50)/50).toFixed(2); if (br!==lastBr){ lastBr=br; fox.style.setProperty('--br', br); } }   // 밝기는 0.02 단위로만 바꿔 다시 그리기를 줄임
 function sx(px,pz){ return px*P/(P-pz); }
 function applyClasses(){ fox.className = ['pose-'+pose, BEHAV[pose]||'', facing==='right'?'face-right':'', imgOK?'img-mode':''].join(' ').trim(); }
 function face(dir){ facing=dir; inner.style.transform = dir==='left' ? 'none' : 'scaleX(-1)'; applyClasses(); if (typeof positionHeld==='function') positionHeld(); }
@@ -394,6 +430,8 @@ function nearestPainted(css){
   for (const p of PAINTED){ const q=[1,3,5].map(i=>parseInt(p.c.slice(i,i+2),16)); const d=(q[0]-t[0])**2+(q[1]-t[1])**2+(q[2]-t[2])**2; if (d<bd){ bd=d; best=p; } }
   return best;
 }
+let lastCamFx=-1;
+function setMask(el,k){ const v=`${cam - k*SEG}px 0`; el.style.webkitMaskPosition=v; el.style.maskPosition=v; }
 function makeSeg(k){
   const r=rng(k*7919+13);
   const seg=document.createElement('div'); seg.className='seg'; seg.dataset.k=k; seg.style.left=(k*SEG)+'px'; seg.style.width=SEG+'px';
@@ -424,6 +462,8 @@ function makeSeg(k){
     }
     seg.appendChild(row);
   }
+  // 꽃덤불(.clump)은 '책꽃' 기능 전까지 쓰지 않음 (언덕에는 풀만)
+  setMask(seg,k);
   shelf.appendChild(seg); segs.set(k,seg);
 }
 function ensureSegs(){
@@ -435,7 +475,12 @@ const floorEl=document.getElementById('floorP');
 function applyCam(){
   shelf.style.transform=`translateX(${-cam}px) translateZ(${DEPTH}px)`;
   floorEl.style.backgroundPosition=`0 ${-cam}px`;
-  ensureSegs(); placePile(); if (hlTarget) queueHL();
+  // 언덕은 아주 천천히(시차), 안개 마스크는 화면 기준 위치에 고정. 상속되는 CSS 변수 대신 속성을 직접 바꿔 스타일 재계산을 줄임
+  if (cam!==lastCamFx){ lastCamFx=cam;
+    stage.style.setProperty('background-position', `calc(50% - ${(cam*0.04).toFixed(1)}px) 100%`, 'important');
+    for (const [k,el] of segs) setMask(el,k);
+  }
+  ensureSegs(); placePile(); placeGarden(); if (hlTarget) queueHL();
 }
 function spineZ(sp){
   const k=+sp.parentNode.parentNode.dataset.k;
@@ -838,7 +883,7 @@ document.documentElement.addEventListener('pointerleave', ()=>{ pointerIn=false;
 addEventListener('resize', fitRoom);
 
 /* 시작 */
-function start(){ if (held.parentNode!==bob) bob.appendChild(held); if (fox.parentNode!==stage) stage.appendChild(fox); fitRoom(); Promise.all([loadBooks(), preloadFox()]).then(()=>{ document.getElementById('world').appendChild(pileEl); loadPile(); renderPile(); applyCam(); intro(); loadDebug(); }); }
+function start(){ if (held.parentNode!==bob) bob.appendChild(held); if (fox.parentNode!==stage) stage.appendChild(fox); fitRoom(); Promise.all([loadBooks(), preloadFox()]).then(()=>{ document.getElementById('world').appendChild(gardenEl); document.getElementById('world').appendChild(pileEl); loadPile(); renderPile(); renderGarden(); applyCam(); intro(); loadDebug(); }); }
 /* #debug 일 때만 조정 패널 스크립트를 불러옴 (없으면 패널 코드 자체가 로드되지 않음) */
 function loadDebug(){
   if (location.hash!=='#debug') return;
