@@ -375,3 +375,11 @@ body.view-only #spineHL{display:none}
 #gardenKey{display:block;width:100%;box-sizing:border-box;margin:4px 0 8px;padding:9px 12px;border-radius:10px;font:inherit;font-size:15px;
   border:1.5px solid rgba(91,67,48,.45);background:#fbf6ea;color:#3B342A}
 #gardenKey:focus-visible{outline:2px solid #8a9ba8;outline-offset:2px}
+
+/* 처음 들어올 때 덮어 두는 막: 풀밭 하늘과 같은 크림 종이색. 준비가 끝나면 .up 으로 걷힘 */
+#curtain{position:fixed;inset:0;z-index:300;display:grid;place-items:center;pointer-events:none;
+  background:linear-gradient(rgba(240,230,205,.38),rgba(240,230,205,.38)),#efe6cf url(../assets/tex/paper.webp);transition:opacity .7s ease}
+#curtain.up{opacity:0}
+#curtain p{margin:0;font-family:'Gowun Batang',serif;font-size:15px;color:#8a7d69;letter-spacing:.06em;opacity:0;animation:curtainHint .6s ease 1.2s forwards}
+@keyframes curtainHint{to{opacity:1}}   /* 금방 준비되면 문구조차 안 보이게, 1.2초가 넘을 때만 */
+@media (prefers-reduced-motion:reduce){ #curtain{transition:opacity .2s} }

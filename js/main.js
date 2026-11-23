@@ -343,10 +343,14 @@ if (ROUND){
 const SRC = n => `assets/fox/${n}.webp`;
 let imgOK=false, frameTimer=null;
 const imgCache={};
+let foxRest=()=>Promise.resolve();   // 나중에 받을 여우 그림 (preloadFox가 채움)
 function preloadFox(){
   const names=[...new Set([...Object.values(POSES).flatMap(p=>Array.isArray(p)?p:p.f), 'r_give_front','r_give_wrap','r_give_wrapfront'])];   // 꽃다발 장면용 겹침 그림도 미리
-  return Promise.all(names.map(n=>new Promise((res,rej)=>{ const im=new Image(); imgCache[n]=im; im.onload=()=>(im.decode?im.decode().catch(()=>{}):Promise.resolve()).then(res); im.onerror=()=>res(); im.src=SRC(n); })))   // 그림 하나가 실패해도 나머지로 시작 (모바일 데이터에서 멈추지 않게)
-    .then(()=>{ imgOK=true; }).catch(()=>{ imgOK=false; });
+  const load=n=>new Promise(res=>{ const im=new Image(); imgCache[n]=im; im.onload=()=>(im.decode?im.decode().catch(()=>{}):Promise.resolve()).then(res); im.onerror=()=>res(); im.src=SRC(n); });   // 그림 하나가 실패해도 나머지로 시작
+  // 첫 화면(걸어 들어와 서기·돌아서기)에 필요한 그림만 먼저 받고, 나머지(먹기·잠·꽃다발·가위 등)는 화면이 뜬 뒤 뒤에서 받음
+  const first=new Set(['walk','crawl','stand','rest','turn','turn2'].flatMap(k=>POSES[k]?(Array.isArray(POSES[k])?POSES[k]:POSES[k].f):[]));
+  foxRest=()=>Promise.all(names.filter(n=>!first.has(n)).map(load));
+  return Promise.all([...first].map(load)).then(()=>{ imgOK=true; }).catch(()=>{ imgOK=false; });
 }
 let curImg=null, curFrame=0, stepDist=0;
 /* 포즈의 크기·위치 보정·그림자 폭을 그림에 적용 */
@@ -1221,7 +1225,31 @@ document.documentElement.addEventListener('pointerleave', ()=>{ pointerIn=false;
 addEventListener('resize', fitRoom);
 
 /* 시작 */
-function start(){ stage.insertBefore(farCv, stage.firstChild); sizeFar(); addEventListener('resize', sizeFar); if (held.parentNode!==bob) bob.appendChild(held); if (fox.parentNode!==stage) stage.appendChild(fox); fitRoom(); Promise.all([loadBooks(), preloadFox(), viewReady.then(v=>{ viewData=v; })]).then(()=>{ document.getElementById('world').appendChild(gardenEl); document.getElementById('world').appendChild(pileEl); loadPile(); renderPile(); renderGarden(); if (VIEW) setupViewMode(); applyCam(); intro(); loadDebug(); }); }
+/* 처음 화면을 한 번에 보여주기: 배경·책등·꽃·책 그림을 모두 받아 '그릴 준비'(decode)까지 마친 뒤,
+   책장을 만들고 두 프레임 기다렸다가 크림색 막(#curtain)을 걷어냄. 느린 네트워크에선 최대 SCENE_WAIT 만 기다림 */
+const SCENE_WAIT=9000, keepDecoded=[];
+function sceneImages(){
+  return [
+    'assets/meadow/field.webp','assets/tex/paper.webp','assets/tex/grain.webp','assets/tex/wash.webp','assets/tex/floor.webp','assets/tex/farshelf.webp',
+    ...PAINTED.map(pb=>`assets/books/${pb.f}.webp`),
+    ...FLOWERS.flatMap(f=>[`assets/flowers/${f.f}.webp`,`assets/flowers/${f.f}m.webp`]),
+    'assets/book/lay.webp','assets/book/lay_mask.webp',
+  ];
+}
+function preloadScene(){
+  const all=Promise.all(sceneImages().map(u=>new Promise(res=>{
+    const im=new Image(); keepDecoded.push(im);
+    im.onload=()=>(im.decode?im.decode().catch(()=>{}):Promise.resolve()).then(res); im.onerror=()=>res(); im.src=u;
+  })));
+  return Promise.race([all, wait(SCENE_WAIT)]);
+}
+function revealScene(){
+  const c=document.getElementById('curtain'); if (!c) return Promise.resolve();
+  return new Promise(res=>requestAnimationFrame(()=>requestAnimationFrame(()=>{   // 책장이 그려진 다음 프레임에 걷기
+    c.classList.add('up'); setTimeout(()=>{ c.remove(); res(); }, 750);
+  })));
+}
+function start(){ stage.insertBefore(farCv, stage.firstChild); sizeFar(); addEventListener('resize', sizeFar); if (held.parentNode!==bob) bob.appendChild(held); if (fox.parentNode!==stage) stage.appendChild(fox); fitRoom(); Promise.all([loadBooks(), preloadFox(), preloadScene(), viewReady.then(v=>{ viewData=v; })]).then(()=>{ document.getElementById('world').appendChild(gardenEl); document.getElementById('world').appendChild(pileEl); loadPile(); renderPile(); renderGarden(); if (VIEW) setupViewMode(); applyCam(); drawFar(); revealScene().then(()=>foxRest()); intro(); loadDebug(); }); }
 /* #debug 일 때만 조정 패널 스크립트를 불러옴 (없으면 패널 코드 자체가 로드되지 않음) */
 function loadDebug(){
   if (location.hash!=='#debug') return;
@@ -1229,4 +1257,5 @@ function loadDebug(){
   const sc=document.createElement('script'); sc.src='js/debug.js'; document.body.appendChild(sc);
 }
 addEventListener('hashchange', ()=>{ if (location.hash==='#debug') loadDebug(); else if (window.FoxDebug) FoxDebug.hide(); });
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+// 글꼴은 최대 2.5초만 기다림 (느린 휴대폰 데이터에서 시작이 멈추지 않게)
+if (document.fonts && document.fonts.ready) Promise.race([document.fonts.ready, new Promise(r=>setTimeout(r,2500))]).then(start); else start();
