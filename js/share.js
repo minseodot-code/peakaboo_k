@@ -1,8 +1,11 @@
-/* 보기 전용 링크: 내 꽃밭(먹은 책·기록·메모)을 주소 안에 압축해 담음. 서버 없이 링크만으로 다른 사람이 볼 수 있음.
-   주소: index.html?view=<압축한 내용>  (archive.html 도 같은 ?view= 를 씀)
-   보기 전용에서는 아무것도 저장하지 않고, 책을 먹거나 꽃을 자를 수 없음. 링크는 만든 순간의 모습(스냅숏) */
+/* 보기 전용: 다른 사람이 내 꽃밭을 보기만 하는 화면. 아무것도 저장하지 않고, 책을 먹거나 꽃을 자를 수 없음
+   - 고정 주소 /view (모음 페이지는 /archive?view): 서버(/api/garden)에 올려 둔 최신 꽃밭을 읽음
+     주인 화면에서 비밀번호(Vercel 환경 변수 GARDEN_KEY)를 한 번 넣으면, 책을 먹거나 메모를 쓸 때마다 자동으로 올라감
+   - 예전 링크 ?view=<압축한 내용> 도 계속 열림 (그 링크를 만든 순간의 모습) */
 const VIEW_RAW=new URLSearchParams(location.search).get('view');
-const VIEW=VIEW_RAW!=null;
+const VIEW_SERVER=/^\/view\/?$/.test(location.pathname) || VIEW_RAW==='';
+const VIEW=VIEW_SERVER || VIEW_RAW!=null;
+const KEY_STORE='peakaboo-key';
 function b64u(bytes){ let s=''; for (const b of bytes) s+=String.fromCharCode(b); return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
 function unb64u(str){ const s=atob(str.replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from(s,c=>c.charCodeAt(0)); }
 async function packView(obj){
@@ -20,15 +23,37 @@ async function unpackView(str){
     return { p:Array.isArray(o.p)?o.p:[], a:Array.isArray(o.a)?o.a:[], m:(o.m&&typeof o.m==='object')?o.m:{}, b:Array.isArray(o.b)?o.b:[] };
   } catch(e){ return {p:[],a:[],m:{},b:[]}; }
 }
-const viewReady = VIEW ? unpackView(VIEW_RAW) : Promise.resolve(null);
-/* 지금 이 브라우저의 기록으로 보기 전용 링크 만들기 (주인 화면의 공유 버튼) */
-async function makeViewLink(){
+async function fetchGarden(){
+  try { const r=await fetch('/api/garden',{cache:'no-store'}); if (!r.ok) throw 0; const o=await r.json();
+    return { p:Array.isArray(o.p)?o.p:[], a:Array.isArray(o.a)?o.a:[], m:(o.m&&typeof o.m==='object')?o.m:{}, b:Array.isArray(o.b)?o.b:[] };
+  } catch(e){ return {p:[],a:[],m:{},b:[]}; }
+}
+const viewReady = !VIEW ? Promise.resolve(null) : VIEW_SERVER ? fetchGarden() : unpackView(VIEW_RAW);
+/* 지금 이 브라우저의 꽃밭 (주인 화면에서 서버로 올릴 내용) */
+function gardenSnapshot(){
   const get=(k,d)=>{ try { return JSON.parse(localStorage.getItem(k)||d); } catch(e){ return JSON.parse(d); } };
   const p=get('peakaboo-pile','[]'), arch=get('peakaboo-archive','[]'), memos=get('peakaboo-memo','{}'), bq=get('peakaboo-bouquets','[]');
-  const a=arch.map(r=>[r.s,r.t]);
   const keep=new Set([...p,...arch.map(r=>r.s)]), m={};
   for (const k in memos) if (keep.has(k) && String(memos[k]).trim()) m[k]=memos[k];
-  const page=location.pathname.replace(/[^/]*$/,'');   // 사이트 첫 화면 주소 (index.html 은 붙이지 않음: 서버가 넘기며 ?view= 를 버릴 수 있음)
-  return location.origin+page+'?view='+await packView({p,a,m,b:bq.map(q=>({t:q.t,b:q.b}))});
+  return {p, a:arch.map(r=>[r.s,r.t]), m, b:bq.map(q=>({t:q.t,b:q.b}))};
 }
-function viewQuery(){ return VIEW ? '?view='+encodeURIComponent(VIEW_RAW) : ''; }
+/* 서버에 올리기. 결과: 'ok' | 'wrong-key' | 'not-set-up' | 'fail' */
+async function publishGarden(key){
+  key=key||(()=>{ try { return localStorage.getItem(KEY_STORE); } catch(e){ return null; } })();
+  if (!key) return 'no-key';
+  try {
+    const r=await fetch('/api/garden',{method:'POST',headers:{'Content-Type':'application/json','x-garden-key':key},body:JSON.stringify(gardenSnapshot())});
+    if (r.ok) return 'ok';
+    if (r.status===401) return 'wrong-key';
+    if (r.status===503) return 'not-set-up';
+    return 'fail';
+  } catch(e){ return 'fail'; }
+}
+let pubTimer=0;
+function schedulePublish(){      // 꽃밭이 바뀔 때마다 (비밀번호를 넣어 둔 주인 화면에서만) 조금 기다렸다 올림
+  if (VIEW) return; try { if (!localStorage.getItem(KEY_STORE)) return; } catch(e){ return; }
+  clearTimeout(pubTimer); pubTimer=setTimeout(()=>publishGarden(), 1500);
+}
+const VIEW_URL=location.origin+'/view';
+function viewQuery(){ return !VIEW ? '' : VIEW_SERVER ? '?view' : '?view='+encodeURIComponent(VIEW_RAW); }
+function viewHome(){ return !VIEW ? './' : VIEW_SERVER ? '/view' : './'+viewQuery(); }
