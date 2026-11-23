@@ -3,7 +3,7 @@
      주인 화면에서 링크 버튼을 처음 누르면 그 브라우저가 주인으로 등록되고, 그 뒤로 책을 먹거나 메모를 쓸 때마다 자동으로 올라감
    - 예전 링크 ?view=<압축한 내용> 도 계속 열림 (그 링크를 만든 순간의 모습) */
 const VIEW_RAW=new URLSearchParams(location.search).get('view');
-const VIEW_SERVER=/^\/view\/?$/.test(location.pathname) || VIEW_RAW==='';
+const VIEW_SERVER=/^\/view(\/|$)/.test(location.pathname) || VIEW_RAW==='';
 const VIEW=VIEW_SERVER || VIEW_RAW!=null;
 function b64u(bytes){ let s=''; for (const b of bytes) s+=String.fromCharCode(b); return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
 function unb64u(str){ const s=atob(str.replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from(s,c=>c.charCodeAt(0)); }
@@ -22,10 +22,11 @@ async function unpackView(str){
     return { p:Array.isArray(o.p)?o.p:[], a:Array.isArray(o.a)?o.a:[], m:(o.m&&typeof o.m==='object')?o.m:{}, b:Array.isArray(o.b)?o.b:[] };
   } catch(e){ return {p:[],a:[],m:{},b:[]}; }
 }
+let viewLoadFailed=false;   // /view 에서 꽃밭을 못 불러왔을 때 (저장소 미연결·네트워크) 안내용
 async function fetchGarden(){
   try { const r=await fetch('/api/garden',{cache:'no-store'}); if (!r.ok) throw 0; const o=await r.json();
     return { p:Array.isArray(o.p)?o.p:[], a:Array.isArray(o.a)?o.a:[], m:(o.m&&typeof o.m==='object')?o.m:{}, b:Array.isArray(o.b)?o.b:[] };
-  } catch(e){ return {p:[],a:[],m:{},b:[]}; }
+  } catch(e){ viewLoadFailed=true; return {p:[],a:[],m:{},b:[]}; }
 }
 const viewReady = !VIEW ? Promise.resolve(null) : VIEW_SERVER ? fetchGarden() : unpackView(VIEW_RAW);
 /* 지금 이 브라우저의 꽃밭 (주인 화면에서 서버로 올릴 내용) */

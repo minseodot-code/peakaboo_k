@@ -345,7 +345,7 @@ let imgOK=false, frameTimer=null;
 const imgCache={};
 function preloadFox(){
   const names=[...new Set([...Object.values(POSES).flatMap(p=>Array.isArray(p)?p:p.f), 'r_give_front','r_give_wrap','r_give_wrapfront'])];   // 꽃다발 장면용 겹침 그림도 미리
-  return Promise.all(names.map(n=>new Promise((res,rej)=>{ const im=new Image(); imgCache[n]=im; im.onload=()=>(im.decode?im.decode().catch(()=>{}):Promise.resolve()).then(res); im.onerror=rej; im.src=SRC(n); })))
+  return Promise.all(names.map(n=>new Promise((res,rej)=>{ const im=new Image(); imgCache[n]=im; im.onload=()=>(im.decode?im.decode().catch(()=>{}):Promise.resolve()).then(res); im.onerror=()=>res(); im.src=SRC(n); })))   // 그림 하나가 실패해도 나머지로 시작 (모바일 데이터에서 멈추지 않게)
     .then(()=>{ imgOK=true; }).catch(()=>{ imgOK=false; });
 }
 let curImg=null, curFrame=0, stepDist=0;
@@ -1138,7 +1138,7 @@ addEventListener('keydown', e=>{
 function setupViewMode(){
   document.body.classList.add('view-only');
   $('#label').textContent='밑줄 먹는 여우 · 보기 전용';
-  hint.textContent = pile.length ? '커서를 움직이면 여우가 따라와요 · 풀밭의 꽃을 누르면 그 책의 꿈을 꿔요' : '아직 핀 꽃이 없어요';
+  hint.textContent = viewLoadFailed ? '꽃밭을 불러오지 못했어요 · 잠시 뒤 새로고침해 주세요' : pile.length ? (matchMedia('(pointer:coarse)').matches ? '풀밭의 꽃을 누르면 그 책의 꿈을 꿔요' : '커서를 움직이면 여우가 따라와요 · 풀밭의 꽃을 누르면 그 책의 꿈을 꿔요') : '아직 핀 꽃이 없어요';
   $('#snip').hidden=true; $('#shareView').hidden=true; snipAsk.hidden=true; keyAsk.hidden=true;
   $('#toArchive').href='/archive'+viewQuery();   // .html 을 붙이면 서버가 깨끗한 주소로 넘기며 ?view= 를 버릴 수 있음
   shelf.setAttribute('aria-label','책장 (보기 전용)'); shelf.removeAttribute('role');
