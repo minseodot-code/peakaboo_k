@@ -45,11 +45,11 @@
 <nav id="tools" aria-label="여우의 언덕 도구">
   <a class="tool" id="toArchive" href="archive"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.2c3-1.4 6-1.3 9 .6c3-1.9 6-2 9-.6v12.6c-3-1.4-6-1.3-9 .6c-3-1.9-6-2-9-.6Z"/><path d="M12 6.8v12.6"/></svg><span class="tip">먹은 책 모아 보기</span></a>
   <button class="tool" id="shareView" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.2 1.2"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.2-1.2"/></svg><span class="tip">보기 전용 링크 복사</span></button>
-  <div id="keyAsk" role="dialog" aria-label="보기 전용 링크 켜기" hidden>
-    <p>보기 전용 링크를 켜려면<br>비밀번호를 한 번 넣어 주세요</p>
-    <input type="password" id="gardenKey" autocomplete="current-password" placeholder="비밀번호" aria-label="비밀번호">
-    <small class="key-msg" aria-live="polite">Vercel에 정해 둔 GARDEN_KEY예요. 이 브라우저가 기억해서, 그다음부터는 꽃밭이 바뀔 때마다 자동으로 올라가요.</small>
-    <div class="ask-btns"><button type="button" class="key-yes">켜기</button><button type="button" class="key-no">그만둘래요</button></div>
+  <div id="keyAsk" role="dialog" aria-label="꽃밭 주인 옮기기" hidden>
+    <p>다른 브라우저가 이 꽃밭의<br>주인으로 등록돼 있어요</p>
+    <input type="password" id="gardenKey" autocomplete="current-password" placeholder="비상용 비밀번호" aria-label="비상용 비밀번호">
+    <small class="key-msg" aria-live="polite">이 브라우저로 옮기려면 Vercel에 정해 둔 GARDEN_KEY를 넣어 주세요.</small>
+    <div class="ask-btns"><button type="button" class="key-yes">옮기기</button><button type="button" class="key-no">그만둘래요</button></div>
   </div>
   <button class="tool" id="snip" type="button" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.4 7.8 20 17.5M8.4 16.2 20 6.5"/></svg><span class="tip">꽃 잘라 꽃다발 받기</span></button>
   <div id="snipAsk" role="dialog" aria-label="꽃 자르기" hidden>

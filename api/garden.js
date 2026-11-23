@@ -1,9 +1,12 @@
 /* 보기 전용 /view 가 읽는 '내 꽃밭' 저장소 (Vercel 서버 함수, 라이브러리 없음)
    GET  /api/garden            → 마지막으로 올린 꽃밭 {p, a, m, b, t}
-   POST /api/garden (JSON 본문) → 꽃밭 올리기. 헤더 x-garden-key 가 환경 변수 GARDEN_KEY 와 같아야 함
+   POST /api/garden (JSON 본문) → 꽃밭 올리기. 헤더 x-garden-owner = 그 브라우저의 주인 표(무작위 문자열)
+     · 아직 주인이 없으면 처음 올린 브라우저가 주인이 됨 (비밀번호 입력 없음)
+     · 그 뒤로는 같은 주인 표로만 올릴 수 있음
+     · 브라우저를 바꿨을 때: 헤더 x-garden-key 가 환경 변수 GARDEN_KEY(선택)와 같으면 새 브라우저가 주인이 됨
    저장소: Vercel 마켓플레이스 'Upstash for Redis' (환경 변수 KV_REST_API_URL/KV_REST_API_TOKEN 또는 UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN) */
 const crypto = require('crypto');
-const KEY = 'peakaboo:garden';
+const KEY = 'peakaboo:garden', OWNER = 'peakaboo:owner';
 const URL_ = () => process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const TOKEN = () => process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 
@@ -16,6 +19,7 @@ function sameKey(a, b) {
   const x = Buffer.from(String(a || '')), y = Buffer.from(String(b || ''));
   return x.length === y.length && x.length > 0 && crypto.timingSafeEqual(x, y);
 }
+const sha = v => crypto.createHash('sha256').update(String(v)).digest('hex');
 function clean(o) {      // 꽃밭 모양만 남기고, 너무 크면 거절
   const arr = v => Array.isArray(v) ? v : [];
   const out = {
@@ -37,8 +41,14 @@ module.exports = async (req, res) => {
       return res.status(200).json(v ? JSON.parse(v) : { p: [], a: [], m: {}, b: [], t: 0 });
     }
     if (req.method === 'POST') {
-      if (!process.env.GARDEN_KEY) return res.status(503).json({ error: 'no-key' });
-      if (!sameKey(req.headers['x-garden-key'], process.env.GARDEN_KEY)) return res.status(401).json({ error: 'wrong-key' });
+      const tok = String(req.headers['x-garden-owner'] || '');
+      if (tok.length < 16) return res.status(400).json({ error: 'no-owner' });
+      const owner = await redis(['GET', OWNER]);
+      if (!owner) await redis(['SET', OWNER, sha(tok)]);                       // 처음 올린 브라우저가 주인
+      else if (owner !== sha(tok)) {
+        if (process.env.GARDEN_KEY && sameKey(req.headers['x-garden-key'], process.env.GARDEN_KEY)) await redis(['SET', OWNER, sha(tok)]);   // 비상용: 주인 되찾기
+        else return res.status(403).json({ error: 'not-owner' });
+      }
       let body = req.body;
       if (typeof body === 'string') body = JSON.parse(body || '{}');
       const data = clean(body || {});

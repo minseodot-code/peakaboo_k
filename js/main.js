@@ -1143,14 +1143,15 @@ function setupViewMode(){
   $('#toArchive').href='/archive'+viewQuery();   // .html 을 붙이면 서버가 깨끗한 주소로 넘기며 ?view= 를 버릴 수 있음
   shelf.setAttribute('aria-label','책장 (보기 전용)'); shelf.removeAttribute('role');
 }
-/* 보기 전용 링크 버튼: 꽃밭을 서버에 올리고 고정 주소 /view 를 복사. 처음 한 번은 비밀번호(GARDEN_KEY)를 물음 */
+/* 보기 전용 링크 버튼: 꽃밭을 서버에 올리고 고정 주소 /view 를 복사. 처음 누른 브라우저가 꽃밭 주인으로 등록됨(입력 없음).
+   다른 브라우저가 이미 주인이면, 비상용 비밀번호(GARDEN_KEY)를 넣어 주인을 이 브라우저로 옮길 수 있음(#keyAsk) */
 const keyAsk=$('#keyAsk'), keyIn=$('#gardenKey'), keyMsg=keyAsk.querySelector('.key-msg');
 const KEY_HELP=keyMsg.textContent;
 function openKeyAsk(msg){ keyMsg.textContent=msg||KEY_HELP; keyAsk.hidden=false; $('#shareView').setAttribute('aria-expanded','true'); keyIn.value=''; keyIn.focus(); }
 function closeKeyAsk(){ keyAsk.hidden=true; $('#shareView').setAttribute('aria-expanded','false'); }
 async function copyViewURL(){
   try { await Promise.race([navigator.clipboard.writeText(VIEW_URL), new Promise((_,rej)=>setTimeout(rej,1500))]);
-    flash(`보기 전용 링크를 복사했어요 · ${VIEW_URL.replace(/^https?:\/\//,'')} · 꽃밭이 바뀌면 자동으로 최신이 보여요`); }
+    flash(`보기 전용 링크를 복사했어요 · ${VIEW_URL.replace(/^https?:\/\//,'')} · 꽃밭이 바뀌면 같은 링크에 자동으로 보여요`); }
   catch(e){ flash('보기 전용 링크: '+VIEW_URL); }
 }
 function publishTrouble(r){
@@ -1159,18 +1160,16 @@ function publishTrouble(r){
 }
 async function onShareView(){
   if (!keyAsk.hidden){ closeKeyAsk(); return; }
-  let key=null; try { key=localStorage.getItem(KEY_STORE); } catch(e){}
-  if (!key){ openKeyAsk(); return; }
-  const r=await publishGarden(key);
+  const r=await publishGarden();
   if (r==='ok') return copyViewURL();
-  if (r==='wrong-key'){ try { localStorage.removeItem(KEY_STORE); } catch(e){} openKeyAsk('비밀번호가 바뀐 것 같아요. 다시 넣어 주세요'); return; }
+  if (r==='not-owner') return openKeyAsk();
   publishTrouble(r);
 }
 async function submitKey(){
   const key=keyIn.value.trim(); if (!key){ keyIn.focus(); return; }
   keyMsg.textContent='확인하는 중…';
   const r=await publishGarden(key);
-  if (r==='ok'){ try { localStorage.setItem(KEY_STORE,key); } catch(e){} closeKeyAsk(); return copyViewURL(); }
+  if (r==='ok'){ closeKeyAsk(); return copyViewURL(); }
   if (r==='wrong-key'){ keyMsg.textContent='비밀번호가 달라요. 다시 확인해 주세요'; keyIn.select(); return; }
   closeKeyAsk(); publishTrouble(r);
 }
