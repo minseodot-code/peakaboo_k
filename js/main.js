@@ -31,22 +31,23 @@ const eatenBooks = new Set();  // 꿈에서 이미 보여준 실제 책 번호
 const PILE_KEY='peakaboo-pile', PILE={x:300, z:-90}, PILE_PER_STACK=12;
 let pile=[], lastDreamBook=null;
 const pileEl=document.createElement('div'); pileEl.id='pile'; pileEl.setAttribute('role','group'); pileEl.setAttribute('aria-label','여우가 먹은 책 더미');
+let viewData=null;   // 보기 전용 링크의 내용 (js/share.js). 보기 전용이면 localStorage 대신 이것만 읽고, 아무것도 저장하지 않음
 function loadPile(){
-  try { const slugs=JSON.parse(localStorage.getItem(PILE_KEY)||'[]');
+  try { const slugs=VIEW ? viewData.p : JSON.parse(localStorage.getItem(PILE_KEY)||'[]');
         pile=[...new Set(slugs.map(sl=>BOOKS.findIndex(b=>bookSlug(b)===sl)).filter(i=>i>=0))]; }
   catch(e){ pile=[]; }
   recordArchive(pile);   // 예전에 먹은 책도 기록에 옮겨 둠
 }
 /* 먹은 책 기록(아카이브): 꽃을 잘라도 남음. archive.html 이 이 기록으로 '먹은 책 모음' 페이지를 그림. [{s:책 slug, t:처음 먹은 시각}] */
 const ARCHIVE_KEY='peakaboo-archive', BOUQUET_KEY='peakaboo-bouquets';
-function readList(key){ try { const v=JSON.parse(localStorage.getItem(key)||'[]'); return Array.isArray(v)?v:[]; } catch(e){ return []; } }
-function writeList(key,v){ try { localStorage.setItem(key, JSON.stringify(v)); } catch(e){} }
+function readList(key){ if (VIEW) return key===ARCHIVE_KEY ? viewData.a.map(([s,t])=>({s,t})) : key===BOUQUET_KEY ? viewData.b : []; try { const v=JSON.parse(localStorage.getItem(key)||'[]'); return Array.isArray(v)?v:[]; } catch(e){ return []; } }
+function writeList(key,v){ if (VIEW) return; try { localStorage.setItem(key, JSON.stringify(v)); } catch(e){} }
 function recordArchive(idx){
   const a=readList(ARCHIVE_KEY), have=new Set(a.map(r=>r.s)); let ch=false;
   for (const i of idx){ const sl=bookSlug(BOOKS[i]); if (!have.has(sl)){ a.push({s:sl,t:Date.now()}); have.add(sl); ch=true; } }
   if (ch) writeList(ARCHIVE_KEY,a);
 }
-function savePile(){ try { localStorage.setItem(PILE_KEY, JSON.stringify(pile.map(i=>bookSlug(BOOKS[i])))); } catch(e){} }
+function savePile(){ if (VIEW) return; try { localStorage.setItem(PILE_KEY, JSON.stringify(pile.map(i=>bookSlug(BOOKS[i])))); } catch(e){} }
 function pileBook(i,k){
   const b=BOOKS[i], r=rng(k*131+7), el=document.createElement('button');
   el.type='button'; el.className='pbook'; el.dataset.b=i; el.title=b.title;
@@ -121,7 +122,7 @@ function bloomFlower(i){
 }
 gardenEl.addEventListener('click', e=>{ const f=e.target.closest('.bflower'); if (f) dreamAgain(+f.dataset.b); });
 async function addToPile(i){
-  if (i==null) return;
+  if (i==null || (VIEW && !pile.includes(i))) return;
   if (pile.includes(i)){                     // 이미 쌓인 책이면 그 책만 살짝 반짝
     const el=pileEl.querySelector(`.pbook[data-b="${i}"]`);
     if (el) el.animate([{filter:'brightness(1)'},{filter:'brightness(1.6)'},{filter:'brightness(1)'}],{duration:900});
@@ -644,7 +645,10 @@ function tick(t){
 requestAnimationFrame(tick);
 
 /* 클릭: 근처 책 꺼내기 → 앉기 → 펼치기 → 넘기기 → 먹기 → 잠 → 꿈 */
-async function fetchAndEat(chosen){
+/* 책 꺼내 먹기는 두 묶음: ① fetchAndSit(책장에서 꺼내 와 앉아 읽기) ② eatAndSleep(끝까지 먹고 누워 잠 → 꿈) */
+async function fetchAndEat(chosen){ const book=await fetchAndSit(chosen); await eatAndSleep(book); }
+let seatedBook=null;   // 책을 들고 앉아 있는 중(단축키 1 뒤)이면 그 책
+async function fetchAndSit(chosen){
   mode='busy'; run++; stopMove(); hideHint();
   let spine=chosen;
   if (!spine){
@@ -718,7 +722,10 @@ async function fetchAndEat(chosen){
     for (let i=0;i<3;i++){ await flipPage(); await wait(260); }
     await wait(450);
   }
-
+  return book;
+}
+async function eatAndSleep(book){
+  mode='busy'; seatedBook=null; hideHint();
   setPose('eat');
   if (ROUND && POSES.eatSteps){
     for (const n of POSES.eatSteps){ if (curImg) curImg.src=SRC(n); if (n!=='r_bookclose') crumbs(); await wait(430); }
@@ -817,8 +824,8 @@ function revealOnScroll(my){
       await wait(el.classList.contains('q') ? 900 : 380);
     }
     running=false;
-    // 첫 화면이 다 떠오르면 깨기 버튼에 포커스 (키보드 사용자가 바로 나갈 수 있게)
-    if (!focused && my===dreamSeq && mode==='dream'){ focused=true; const w=dreamInner.querySelector('#wake'); if (w) w.focus({preventScroll:true}); }
+    // 첫 화면이 다 떠오르면 깨기 버튼에 포커스 (키보드 사용자가 바로 나갈 수 있게). 메모를 쓰는 중이면 건드리지 않음
+    if (!focused && my===dreamSeq && mode==='dream' && !(document.activeElement && document.activeElement.id==='memo')){ focused=true; const w=dreamInner.querySelector('#wake'); if (w) w.focus({preventScroll:true}); }
   }
   revealIO=new IntersectionObserver(es=>{
     for (const e of es) if (e.isIntersecting){ revealIO.unobserve(e.target); queue.push(e.target); }
@@ -869,6 +876,7 @@ async function openFromLink(i){
 /* 페이지를 보는 중에 #book-제목 주소로 바꾸면: 여우가 그 책을 꺼내 먹음 */
 addEventListener('hashchange', ()=>{
   const i=bookFromHash(); if (i==null || mode!=='idle') return;
+  if (VIEW){ if (pile.includes(i)) dreamAgain(i); return; }
   const sp=shelf.querySelector(`.spine.real[data-b="${i}"]:not(.gone)`);
   if (sp) fetchAndEat(sp); else openFromLink(i);
 });
@@ -880,14 +888,24 @@ async function copyDreamLink(b){
   } catch(e){ flash(url); }
 }
 function esc(s){ return s.replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+/* 꿈 페이지: 제목 · 작가 · 인상 깊은 문장(페이지는 있으면) · 메모
+   메모는 이 브라우저(localStorage 'peakaboo-memo')에 책마다 저장. 처음엔 books.json 의 note 를 보여줌 */
+const MEMO_KEY='peakaboo-memo';
+function readMemos(){ if (VIEW) return viewData.m; try { const v=JSON.parse(localStorage.getItem(MEMO_KEY)||'{}'); return v&&typeof v==='object'?v:{}; } catch(e){ return {}; } }
+function pageLabel(p){ p=String(p||'').trim(); return !p?'':/^\d+(\s*[-~–]\s*\d+)?$/.test(p)?'p. '+p:p; }
 function renderDream(b){
+  const slug=bookSlug(b), memos=readMemos(), memo=memos[slug]!=null?memos[slug]:(b.note||'');
+  const quotes=(b.quotes||[]).filter(q=>q&&q.t);
   dreamInner.innerHTML = `
-    <p class="kicker rv">여우가 ${eaten}번째로 먹은 책 · 예시 데이터</p>
     <h1 class="dtitle rv">${esc(b.title)}</h1>
-    <p class="dauthor rv">${esc(b.author)}</p>
-    ${b.quotes.map(q=>`<blockquote class="q rv"><p>${esc(q.t)}</p><span>${esc(q.p)}</span></blockquote>`).join('')}
-    <div class="fnote rv"><small>여우의 한 줄</small><p>${esc(b.note)}</p></div>
-    <div class="tags rv">${b.tags.map(t=>`<span>#${esc(t)}</span>`).join('')}</div>
+    <p class="dauthor rv">${esc(b.author||'')}</p>
+    ${quotes.length?`<h2 class="dlabel rv">인상 깊은 문장</h2>`:''}
+    ${quotes.map(q=>{ const pg=pageLabel(q.p); return `<blockquote class="q rv"><p>${esc(q.t)}</p>${pg?`<span>${esc(pg)}</span>`:''}</blockquote>`; }).join('')}
+    ${VIEW ? (memo.trim()?`<div class="dmemo rv"><h2 class="dlabel">메모</h2><p class="memo-view">${esc(memo)}</p></div>`:'') : `<div class="dmemo rv">
+      <label class="dlabel" for="memo">메모</label>
+      <textarea id="memo" rows="3" placeholder="이 책에 대해 짧게 남겨 두세요">${esc(memo)}</textarea>
+      <small id="memoState" aria-live="polite">이 브라우저에 저장돼요</small>
+    </div>`}
     <div class="actions rv">
       ${b.blog?`<a href="${esc(b.blog)}" target="_blank" rel="noopener">블로그 서평 읽기</a>`:''}
       <button id="share" type="button" class="ghost">이 꿈 링크 복사</button>
@@ -895,6 +913,13 @@ function renderDream(b){
     </div>`;
   dreamInner.querySelector('#wake').addEventListener('click', wake);
   dreamInner.querySelector('#share').addEventListener('click', ()=>copyDreamLink(b));
+  const ta=dreamInner.querySelector('#memo'), st=dreamInner.querySelector('#memoState'); let tmr=0;
+  if (!ta) return;
+  const fit=()=>{ ta.style.height='auto'; ta.style.height=Math.max(ta.scrollHeight,84)+'px'; };
+  ta.addEventListener('input', ()=>{ fit(); clearTimeout(tmr); st.textContent='저장하는 중…';
+    tmr=setTimeout(()=>{ const m=readMemos(); m[slug]=ta.value; try { localStorage.setItem(MEMO_KEY, JSON.stringify(m)); st.textContent='저장했어요'; } catch(e){ st.textContent='저장하지 못했어요'; } }, 400); });
+  ta.addEventListener('keydown', e=>{ if (e.key==='Escape'){ e.stopPropagation(); ta.blur(); } });   // 메모 중 Esc는 글쓰기만 끝냄 (한 번 더 누르면 꿈에서 깸)
+  requestAnimationFrame(fit);
 }
 
 /* 꿈에서 깨기 */
@@ -1053,6 +1078,42 @@ snipAsk.querySelector('.ask-yes').addEventListener('click', cutFlowers);
 snipAsk.querySelector('.ask-no').addEventListener('click', ()=>{ closeAsk(); snipBtn.focus(); });
 snipAsk.addEventListener('keydown', e=>{ if (e.key==='Escape'){ closeAsk(); snipBtn.focus(); } });
 
+/* 단축키 (영상 찍을 때 등 빠르게):
+   1 = 책장에서 책을 꺼내 와 앉아 읽기까지 (그 자리에서 멈춰 기다림)
+   2 = 앉아서 끝까지 먹고 누워 잠들기 → 꿈 (앉아 있지 않으면 1부터 이어서 한 번에) */
+async function shortcutSit(){
+  if (VIEW || mode!=='idle') return;
+  const book=await fetchAndSit(null);
+  seatedBook=book; mode='seated'; flash('책을 들고 앉았어요 · 2를 누르면 먹어요');
+}
+async function shortcutEat(){
+  if (VIEW) return;
+  if (mode==='seated' && seatedBook) return eatAndSleep(seatedBook);
+  if (mode==='idle') return fetchAndEat(null);
+}
+addEventListener('keydown', e=>{
+  if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+  const t=e.target; if (t && (t.tagName==='TEXTAREA' || t.tagName==='INPUT' || t.isContentEditable)) return;
+  if (e.key==='1'){ e.preventDefault(); shortcutSit(); }
+  else if (e.key==='2'){ e.preventDefault(); shortcutEat(); }
+});
+
+/* 보기 전용 화면: 꽃(과 먹은 책 더미)을 눌러 그 책의 꿈을 보는 것만 가능. 책 먹기·꽃 자르기·메모 쓰기·링크 만들기 없음 */
+function setupViewMode(){
+  document.body.classList.add('view-only');
+  $('#label').textContent='밑줄 먹는 여우 · 보기 전용';
+  hint.textContent = pile.length ? '커서를 움직이면 여우가 따라와요 · 풀밭의 꽃을 누르면 그 책의 꿈을 꿔요' : '아직 핀 꽃이 없어요';
+  $('#snip').hidden=true; $('#shareView').hidden=true; snipAsk.hidden=true;
+  $('#toArchive').href='archive'+viewQuery();   // .html 을 붙이면 서버가 깨끗한 주소로 넘기며 ?view= 를 버릴 수 있음
+  shelf.setAttribute('aria-label','책장 (보기 전용)'); shelf.removeAttribute('role');
+}
+$('#shareView').addEventListener('click', async ()=>{
+  if (!pile.length && !readList(ARCHIVE_KEY).length){ flash('아직 먹은 책이 없어요. 책을 먹으면 꽃이 피어요'); return; }
+  const url=await makeViewLink();
+  try { await Promise.race([navigator.clipboard.writeText(url), new Promise((_,rej)=>setTimeout(rej,1500))]); flash('보기 전용 링크를 복사했어요 · 지금 꽃밭 그대로 보여줘요'); }
+  catch(e){ prompt('보기 전용 링크', url); }
+});
+
 /* 입력 */
 function pickSpine(e){
   let t=e && e.target;
@@ -1065,13 +1126,14 @@ function pickSpine(e){
   return best;
 }
 function onShelf(e){
+  if (VIEW){ if (mode==='idle') flash('보기 전용이에요 · 풀밭의 꽃을 누르면 그 책을 볼 수 있어요'); return; }
   const sp=pickSpine(e);
   if (mode==='idle') fetchAndEat(sp);
   else if (mode==='intro'){ pending=sp||true; }
 }
 shelf.addEventListener('click', onShelf);
 shelf.addEventListener('keydown', e=>{ if (e.key==='Enter'||e.key===' '){ e.preventDefault(); onShelf(); } });
-addEventListener('keydown', e=>{ if (e.key==='Escape' && mode==='dream') wake(); });
+addEventListener('keydown', e=>{ if (e.key==='Escape' && mode==='dream' && !(e.target && e.target.id==='memo')) wake(); });
 addEventListener('pointermove', e=>{ if (holdForUI(e)) return; px=e.clientX; py=e.clientY; pointerIn=true; pointerMovedAt=performance.now(); if (mode==='idle' && !following) startFollow(); });
 /* 커서 아래 책 강조: 평면 레이어 하나를 그 책 위치로 옮김 (한 프레임에 한 번만) */
 const spineHL=document.createElement('div'); spineHL.id='spineHL'; stage.appendChild(spineHL);
@@ -1093,7 +1155,7 @@ document.documentElement.addEventListener('pointerleave', ()=>{ pointerIn=false;
 addEventListener('resize', fitRoom);
 
 /* 시작 */
-function start(){ stage.insertBefore(farCv, stage.firstChild); sizeFar(); addEventListener('resize', sizeFar); if (held.parentNode!==bob) bob.appendChild(held); if (fox.parentNode!==stage) stage.appendChild(fox); fitRoom(); Promise.all([loadBooks(), preloadFox()]).then(()=>{ document.getElementById('world').appendChild(gardenEl); document.getElementById('world').appendChild(pileEl); loadPile(); renderPile(); renderGarden(); applyCam(); intro(); loadDebug(); }); }
+function start(){ stage.insertBefore(farCv, stage.firstChild); sizeFar(); addEventListener('resize', sizeFar); if (held.parentNode!==bob) bob.appendChild(held); if (fox.parentNode!==stage) stage.appendChild(fox); fitRoom(); Promise.all([loadBooks(), preloadFox(), viewReady.then(v=>{ viewData=v; })]).then(()=>{ document.getElementById('world').appendChild(gardenEl); document.getElementById('world').appendChild(pileEl); loadPile(); renderPile(); renderGarden(); if (VIEW) setupViewMode(); applyCam(); intro(); loadDebug(); }); }
 /* #debug 일 때만 조정 패널 스크립트를 불러옴 (없으면 패널 코드 자체가 로드되지 않음) */
 function loadDebug(){
   if (location.hash!=='#debug') return;
