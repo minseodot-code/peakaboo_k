@@ -24,15 +24,15 @@
   "rewrites": [
     {
       "source": "/view",
-      "destination": "/index.html"
+      "destination": "/"
     },
     {
       "source": "/view/",
-      "destination": "/index.html"
+      "destination": "/"
     },
     {
       "source": "/view/:rest*",
-      "destination": "/index.html"
+      "destination": "/"
     }
   ]
 }
