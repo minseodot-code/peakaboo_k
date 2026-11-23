@@ -25,6 +25,14 @@
     {
       "source": "/view",
       "destination": "/index.html"
+    },
+    {
+      "source": "/view/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/view/:rest*",
+      "destination": "/index.html"
     }
   ]
 }

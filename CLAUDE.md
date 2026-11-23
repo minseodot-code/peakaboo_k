@@ -51,4 +51,5 @@
 - 접근성: 책장은 키보드(Enter/Space)로도 동작, Esc로 꿈에서 깸, `prefers-reduced-motion` 존중
 - 배경 풀밭(`assets/meadow/field.webp`): 지평선이 그림 위에서 42%(= 책장 소실점, #viewport perspective-origin)에 오도록 미드저니 그림을 옆·아래로 넓혀 만듦. 그림을 바꾸면 이 비율을 맞출 것
 - 먼 책장: 진짜 책(.seg)은 카메라에서 약 1150px까지만 만들고, 그 너머 지평선까지는 `drawFar()`가 책장 한 칸 그림(`assets/tex/farshelf.webp`)을 원근대로 잘게 나눠 #stage 맨 뒤 캔버스(#farShelf)에 그림. 멀수록 크림색 안개. 책장 모양(책·나무판)을 크게 바꾸면 이 그림도 다시 찍을 것
+- index.html·archive.html에 `<base href="/">`: 휴대폰 앱 안 브라우저가 `/view/`처럼 끝에 /를 붙여도 css·js·그림·데이터를 맨 위에서 찾게 함. vercel.json도 `/view/`, `/view/…`를 index.html로. `#`만 있는 a 링크를 새로 만들지 말 것(base 때문에 첫 화면으로 감)
 - `vercel.json`이 assets를 1년 캐시함: 그림을 바꿀 땐 같은 이름으로 덮어쓰지 말고 새 파일 이름을 쓸 것 (안 그러면 방문자 브라우저에 예전 그림이 남음)
