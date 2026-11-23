@@ -1020,18 +1020,21 @@ function askSnip(){
   if (mode!=='idle'){ flash('여우가 하던 일을 마치면 다시 눌러 주세요'); return; }
   if (!pile.length){ flash('아직 핀 꽃이 없어요. 여우가 책을 먹으면 꽃이 피어요'); return; }
   snipAsk.querySelector('.ask-n').textContent=pile.length;
+  const sel=$('#snipCount');      // 1 ~ 핀 꽃 수. 처음엔 전부
+  sel.innerHTML=pile.map((_,k)=>`<option value="${k+1}">${k+1}</option>`).join(''); sel.value=String(pile.length);
   snipAsk.hidden=false; snipBtn.setAttribute('aria-expanded','true');
-  snipAsk.querySelector('.ask-yes').focus();
+  sel.focus();
 }
 function closeAsk(){ snipAsk.hidden=true; snipBtn.setAttribute('aria-expanded','false'); }
 async function cutFlowers(){
+  const n=Math.max(1,Math.min(pile.length, parseInt($('#snipCount').value,10)||pile.length));
   closeAsk();
   if (mode!=='idle' || !pile.length) return;
   mode='busy'; run++; following=false; stopMove(); hideHint(); tools.classList.add('off');
-  const books=pile.slice();
+  const books=pile.slice(0,n);      // 먼저 핀(먼저 먹은) 꽃부터 n송이
   if (cam>0) await rollCam(-cam);
   // 가까운 꽃부터 찾아가 자르기. 바로 옆(120px 안)에 핀 꽃은 그 자리에서 이어서 자름
-  const all=[...gardenEl.querySelectorAll('.bflower')], reach=snipReach();
+  const pick=new Set(books), all=[...gardenEl.querySelectorAll('.bflower')].filter(f=>pick.has(+f.dataset.b)), reach=snipReach();
   let rest=all.slice();
   while (rest.length){
     rest.sort((p,q)=>Math.hypot(+p.dataset.x-x,+p.dataset.z-z)-Math.hypot(+q.dataset.x-x,+q.dataset.z-z));
@@ -1053,8 +1056,8 @@ async function cutFlowers(){
     sl.animate([{transform:base+' scale(.2)',opacity:0},{transform:base+' scale(1.08)',opacity:1,offset:.7},{transform:base,opacity:1}],{duration:340/SPD,easing:'ease-out',fill:'backwards'});
     await wait(Math.max(90, Math.min(220, 1600/all.length)));
   }
-  // 풀밭은 다시 비고, 더미도 비움 (먹은 책 기록은 남음)
-  pile=[]; savePile(); renderPile(); placePile(); gardenEl.innerHTML='';
+  // 자른 꽃과 그 책은 풀밭·더미에서 빠짐 (먹은 책 기록은 남음). 남은 꽃은 그대로
+  pile=pile.filter(i=>!pick.has(i)); savePile(); renderPile(); placePile(); all.forEach(f=>f.remove());
   const bqs=readList(BOUQUET_KEY); bqs.push({t:Date.now(), b:books.map(i=>bookSlug(BOOKS[i]))}); writeList(BOUQUET_KEY,bqs);
   await wait(600);
   await giveBouquet(bq, books);
@@ -1098,7 +1101,7 @@ function giveBouquet(bq, books){
       await gift.animate([{transform:'none',opacity:1},{transform:`translateY(${innerHeight*.6}px) scale(1.25)`,opacity:0}],
         {duration:950/SPD,easing:'cubic-bezier(.5,0,.8,.4)',fill:'forwards'}).finished;
       gift.remove(); card.remove(); await back.finished; back.cancel(); stage.getAnimations().forEach(a=>a.cancel()); stage.style.transformOrigin=''; veil.remove();
-      flash('꽃다발을 받았어요. 풀밭은 다시 고요해졌어요');
+      flash(pile.length ? `꽃다발을 받았어요. 풀밭엔 꽃 ${pile.length}송이가 남아 있어요` : '꽃다발을 받았어요. 풀밭은 다시 고요해졌어요');
       res();
     };
     const onKey=e=>{ if (e.key==='Escape') take(); };
