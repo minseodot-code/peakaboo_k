@@ -336,7 +336,8 @@ if (ROUND){
     eatSteps: ['r_bookclose','r_eat2','r_bookclose','r_eat2','r_eat3','r_eat4','r_eat3','r_eat4','r_eat5'],
     full:  { f:['r_eat5'],  h:210, sh:'52%' },          // 다 먹고 만족
     sleep: { f:['r_sleep'], h:132, sh:'82%', head:[.3,.33] },
-    give:  { f:['r_give'],  h:250, sh:'30%' },          // 꽃다발(빈 포장지)을 두 앞발로 든 정면. 꽃은 코드가 꽂음(makeGiveLayer)
+    give:  { f:['r_give'],  h:250, sh:'30%' },
+    snip:  { f:['r_snip_open','r_snip_shut'], h:245, sh:'30%' },   // 가위로 꽃 자르기: 벌림 ↔ 닫힘을 snipFrame()이 직접 바꿈 (가위는 화면 왼쪽 아래)          // 꽃다발(빈 포장지)을 두 앞발로 든 정면. 꽃은 코드가 꽂음(makeGiveLayer)
   });
 }
 const SRC = n => `assets/fox/${n}.webp`;
@@ -356,7 +357,7 @@ function applyLook(img,c){
 }
 /* 옆모습 포즈와 정면 포즈 사이를 오갈 때 중간 그림(몸 돌리기)을 짧게 끼워 넣음.
    포즈 값은 바로 바뀌고(동작 로직은 그대로), 화면에만 중간 그림이 TURN_MS씩 보였다가 최종 그림으로 넘어감 */
-const SIDE=new Set(['walk','crawl','carry','reach','reachSit']), FRONT=new Set(['stand','rest','sit','eat','full','give']);
+const SIDE=new Set(['walk','crawl','carry','reach','reachSit']), FRONT=new Set(['stand','rest','sit','eat','full','give','snip']);
 const TURN_MS=110;
 let turnTimer=null;
 function turnSeq(from,to){
@@ -965,7 +966,6 @@ async function wake(){
 const GIVE={x:24, z:ZFRONT-20};             // 꽃다발을 든 여우가 서는 자리 (x는 꽃다발이 화면 가운데에 오도록)
 /* r_give(꽃다발 든 여우) 그림 안의 위치 비율: 꽃줄기가 모이는 곳(포장지 안), 포장지 입구 폭 */
 const GIVE_STEM=[.357,.566], GIVE_OPEN=.45;
-const SCISSORS='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.4 7.8 20 17.5M8.4 16.2 20 6.5"/></svg>';
 const tools=$('#tools'), snipBtn=$('#snip'), snipAsk=$('#snipAsk');
 /* 꽃다발 층: 여우 그림(r_give) 위에 같은 크기로 겹침. [꽃들] 위에 [앞쪽 포장지·앞발(r_give_front)]을 덮어서 꽃이 포장지 안에 꽂힌 것처럼 보임 */
 function makeGiveLayer(n){
@@ -993,27 +993,28 @@ function fillSlot(bq,k,f){       // f: 언덕의 .bflower → 그 꽃 모양·�
   i.style.webkitMaskImage=t.style.webkitMaskImage; i.style.maskImage=t.style.maskImage; d.appendChild(i);
   return d;
 }
-function snipAt(x,y){            // 꽃대 위에서 가위가 싹둑
-  const s=document.createElement('div'); s.className='snipfx'; s.innerHTML=SCISSORS;
-  s.style.left=x+'px'; s.style.top=y+'px'; document.body.appendChild(s);
-  s.animate([{transform:'translate(-50%,-50%) scale(.4) rotate(-30deg)',opacity:0},{transform:'translate(-50%,-50%) scale(1.1) rotate(8deg)',opacity:1,offset:.45},
-             {transform:'translate(-50%,-50%) scale(1) rotate(-14deg)',opacity:1,offset:.7},{transform:'translate(-50%,-50%) scale(.9) rotate(0deg)',opacity:0}],
-            {duration:560/SPD,easing:'ease-out'}).finished.then(()=>s.remove());
+/* 여우가 가위로 꽃 자르기: snip 포즈(r_snip_open/r_snip_shut)를 번갈아 보여줌.
+   SNIP_AT = 그림 안에서 가위 날이 맞물리는 곳(비율). 여우는 꽃줄기가 그 자리에 오도록 꽃 옆에 섬 */
+const SNIP_AT=[.06,.83];
+function snipReach(){      // 여우 몸 가운데에서 가위 날까지 가로 거리(방 좌표 px)
+  const c=POSES.snip, im=imgCache[c.f[0]], ar=im&&im.naturalWidth?im.naturalWidth/im.naturalHeight:.81, w=c.h*ar;
+  return w/2-(c.dx||0)-SNIP_AT[0]*w;
 }
-async function flyToBouquet(f,slotEl){
-  const a=f.getBoundingClientRect(); snipAt(a.left+a.width/2, a.bottom-a.height*.22);
-  await wait(200);
-  const b=slotEl.getBoundingClientRect();
+function snipFrame(k){ if (pose==='snip' && curImg) curImg.src=SRC(POSES.snip.f[k]); }
+async function snipFlower(f){
+  snipFrame(0); await wait(240);
+  snipFrame(1);                                   // 싹둑
+  bob.animate([{transform:'none'},{transform:'translateY(3px)'},{transform:'none'}],{duration:220/SPD});
+  const a=f.getBoundingClientRect(), to=poseAnchor('snip',[.5,.62]);
   const fly=f.cloneNode(true); fly.className='bflower flying'; fly.removeAttribute('title');
   Object.assign(fly.style,{position:'fixed',left:a.left+'px',top:a.top+'px',width:a.width+'px',height:a.height+'px',transform:'none',display:'',zIndex:24});
   document.body.appendChild(fly); f.style.visibility='hidden';
-  const dx=b.left+b.width/2-(a.left+a.width/2), dy=b.top+b.height/2-(a.top+a.height/2), sc=b.height/a.height, ang=+slotEl.dataset.ang;
-  await fly.animate([{transform:'none'},
-    {transform:`translate(${dx*.5}px,${dy*.5-120}px) rotate(${ang*.5-20}deg) scale(${(1+sc)/2})`,offset:.5},
-    {transform:`translate(${dx}px,${dy}px) rotate(${ang}deg) scale(${sc})`}],
-    {duration:820/SPD,easing:'cubic-bezier(.35,.1,.3,1)',fill:'forwards'}).finished;
-  fly.remove(); slotEl.style.visibility='';
-  slotEl.animate([{transform:slotEl.style.transform+' scale(1.08)'},{transform:slotEl.style.transform}],{duration:240});
+  const dx=to.x-(a.left+a.width/2), dy=to.y-(a.top+a.height/2);
+  fly.animate([{transform:'none',opacity:1},
+    {transform:'translate(0,-46px) rotate(-8deg)',opacity:1,offset:.4},
+    {transform:`translate(${dx}px,${dy}px) rotate(10deg) scale(.25)`,opacity:0}],
+    {duration:900/SPD,easing:'cubic-bezier(.4,0,.3,1)',fill:'forwards'}).finished.then(()=>fly.remove());   // 잘린 꽃이 떠올랐다가 여우 품으로
+  await wait(220); snipFrame(0); await wait(160);
 }
 function askSnip(){
   if (mode!=='idle'){ flash('여우가 하던 일을 마치면 다시 눌러 주세요'); return; }
@@ -1029,18 +1030,33 @@ async function cutFlowers(){
   mode='busy'; run++; following=false; stopMove(); hideHint(); tools.classList.add('off');
   const books=pile.slice();
   if (cam>0) await rollCam(-cam);
-  setPose('walk'); await moveTo(GIVE.x, GIVE.z, 190);
-  face('left'); setPose('give'); await wait(350);
-  const bq=makeGiveLayer(books.length);
-  // 꽃을 한 송이씩 잘라 꽃다발로 (가까운 꽃부터, 꽃이 많으면 더 빨리)
-  const fl=[...gardenEl.querySelectorAll('.bflower')].sort((a,b)=>+b.dataset.z-+a.dataset.z);
-  const gap=Math.max(140, Math.min(520, 3600/fl.length));
-  const jobs=fl.map((f,j)=>{ const s=fillSlot(bq,j,f); s.style.visibility='hidden'; return wait(j*gap).then(()=>flyToBouquet(f,s)); });
-  await Promise.all(jobs);
-  // 언덕은 다시 풀밭, 더미도 비움 (먹은 책 기록은 남음)
+  // 가까운 꽃부터 찾아가 자르기. 바로 옆(120px 안)에 핀 꽃은 그 자리에서 이어서 자름
+  const all=[...gardenEl.querySelectorAll('.bflower')], reach=snipReach();
+  let rest=all.slice();
+  while (rest.length){
+    rest.sort((p,q)=>Math.hypot(+p.dataset.x-x,+p.dataset.z-z)-Math.hypot(+q.dataset.x-x,+q.dataset.z-z));
+    const f=rest[0], fx=+f.dataset.x, fz=+f.dataset.z;
+    const near=rest.filter(g=>Math.abs(+g.dataset.x-fx)<120 && Math.abs(+g.dataset.z-fz)<120);
+    rest=rest.filter(g=>!near.includes(g));
+    // 보통은 꽃 오른편에 서서 왼쪽을 보며 자름. 오른쪽 끝이거나 그 자리가 먹은 책 더미와 겹치면 꽃 왼편에 서서 오른쪽을 봄
+    const right=fx+reach>520 || Math.hypot(fx+reach-PILE.x, fz+4-PILE.z)<170;
+    setPose('walk'); await moveTo(right?fx-reach:fx+reach, fz+4, 210);
+    face(right?'right':'left'); setPose('snip'); await wait(300);
+    for (const g of near) await snipFlower(g);
+  }
+  // 모은 꽃으로 꽃다발: 화면 앞으로 나와 꽃다발을 들면 꽃이 한 송이씩 꽂힘
+  setPose('walk'); await moveTo(GIVE.x, GIVE.z, 200);
+  face('left'); setPose('give'); await wait(400);
+  const bq=makeGiveLayer(all.length);
+  for (let j=0;j<all.length;j++){
+    const sl=fillSlot(bq,j,all[j]), base=sl.style.transform;
+    sl.animate([{transform:base+' scale(.2)',opacity:0},{transform:base+' scale(1.08)',opacity:1,offset:.7},{transform:base,opacity:1}],{duration:340/SPD,easing:'ease-out',fill:'backwards'});
+    await wait(Math.max(90, Math.min(220, 1600/all.length)));
+  }
+  // 풀밭은 다시 비고, 더미도 비움 (먹은 책 기록은 남음)
   pile=[]; savePile(); renderPile(); placePile(); gardenEl.innerHTML='';
   const bqs=readList(BOUQUET_KEY); bqs.push({t:Date.now(), b:books.map(i=>bookSlug(BOOKS[i]))}); writeList(BOUQUET_KEY,bqs);
-  await wait(500);
+  await wait(600);
   await giveBouquet(bq, books);
   mode='idle'; tools.classList.remove('off'); showHint(); resumeIdle();
 }

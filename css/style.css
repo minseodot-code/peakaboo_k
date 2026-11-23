@@ -332,8 +332,6 @@ html,body{background:var(--cream)}
 #giftAway{position:fixed;z-index:22;pointer-events:none;transform-origin:50% 60%}
 #giftAway .bq-wrapimg{position:absolute;inset:0;width:100%;height:100%}
 .bflower.flying{pointer-events:none;transform-origin:50% 50%}
-.snipfx{position:fixed;z-index:25;width:34px;height:34px;color:#4a3f32;pointer-events:none}
-.snipfx svg{width:100%;height:100%;fill:rgba(247,241,227,.9);stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
 #giftVeil{position:absolute;inset:0;z-index:3;pointer-events:none;opacity:0;
   background:radial-gradient(ellipse 55% 60% at 50% 55%,rgba(250,244,230,.25),rgba(240,232,210,.8))}
 #giftCard{position:fixed;left:50%;bottom:4vh;transform:translate(-50%,12px);z-index:23;text-align:center;opacity:0;transition:opacity .6s,transform .6s;color:#4a3f32;max-width:min(560px,90vw);
