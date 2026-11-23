@@ -906,7 +906,7 @@ async function copyDreamLink(b){
   } catch(e){ flash(url); }
 }
 function esc(s){ return s.replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-/* 꿈 페이지: 제목 · 작가 · 인상 깊은 문장(페이지는 있으면) · 메모
+/* 꿈 페이지: 제목 · 작가 · 인상 깊은 문장(페이지는 있으면) · 사진 · 메모
    메모는 이 브라우저(localStorage 'peakaboo-memo')에 책마다 저장. 처음엔 books.json 의 note 를 보여줌 */
 const MEMO_KEY='peakaboo-memo';
 function readMemos(){ if (VIEW) return viewData.m; try { const v=JSON.parse(localStorage.getItem(MEMO_KEY)||'{}'); return v&&typeof v==='object'?v:{}; } catch(e){ return {}; } }
@@ -919,6 +919,12 @@ function renderDream(b){
     <p class="dauthor rv">${esc(b.author||'')}</p>
     ${quotes.length?`<h2 class="dlabel rv">인상 깊은 문장</h2>`:''}
     ${quotes.map(q=>{ const pg=pageLabel(q.p); return `<blockquote class="q rv"><p>${esc(q.t)}</p>${pg?`<span>${esc(pg)}</span>`:''}</blockquote>`; }).join('')}
+    <div class="dphotos rv" ${VIEW&&!(b.images||[]).length?'hidden':''}>
+      <h2 class="dlabel">사진</h2>
+      <div class="pgrid"></div>
+      ${VIEW?'':`<label class="pup"><input type="file" accept="image/*" multiple hidden><span>사진 올리기</span></label>
+      <small class="pnote" aria-live="polite">밑줄 친 페이지나 책 사진을 올려 보세요 · 이 브라우저에 저장돼요 (보기 전용 링크엔 담기지 않아요)</small>`}
+    </div>
     ${VIEW ? (memo.trim()?`<div class="dmemo rv"><h2 class="dlabel">메모</h2><p class="memo-view">${esc(memo)}</p></div>`:'') : `<div class="dmemo rv">
       <label class="dlabel" for="memo">메모</label>
       <textarea id="memo" rows="3" placeholder="이 책에 대해 짧게 남겨 두세요">${esc(memo)}</textarea>
@@ -931,6 +937,7 @@ function renderDream(b){
     </div>`;
   dreamInner.querySelector('#wake').addEventListener('click', wake);
   dreamInner.querySelector('#share').addEventListener('click', ()=>copyDreamLink(b));
+  setupPhotos(b, dreamInner.querySelector('.dphotos'));
   const ta=dreamInner.querySelector('#memo'), st=dreamInner.querySelector('#memoState'); let tmr=0;
   if (!ta) return;
   const fit=()=>{ ta.style.height='auto'; ta.style.height=Math.max(ta.scrollHeight,84)+'px'; };
@@ -938,6 +945,46 @@ function renderDream(b){
     tmr=setTimeout(()=>{ const m=readMemos(); m[slug]=ta.value; try { localStorage.setItem(MEMO_KEY, JSON.stringify(m)); st.textContent='저장했어요'; } catch(e){ st.textContent='저장하지 못했어요'; } }, 400); });
   ta.addEventListener('keydown', e=>{ if (e.key==='Escape'){ e.stopPropagation(); ta.blur(); } });   // 메모 중 Esc는 글쓰기만 끝냄 (한 번 더 누르면 꿈에서 깸)
   requestAnimationFrame(fit);
+}
+
+/* 꿈 페이지 사진 칸: books.json 의 images(누구에게나) + 내가 올린 사진(이 브라우저, js/photos.js) */
+const photoURLs=[];   // 만든 사진 주소: 꿈에서 깰 때 정리
+function setupPhotos(b, box){
+  if (!box) return;
+  const grid=box.querySelector('.pgrid'), note=box.querySelector('.pnote'), input=box.querySelector('input[type=file]'), slug=bookSlug(b);
+  photoURLs.splice(0).forEach(u=>URL.revokeObjectURL(u));
+  const fig=(src,alt,id)=>`<figure class="ph"><img src="${src}" alt="${esc(alt)}" loading="lazy">${id!=null&&!VIEW?`<button type="button" class="pdel" data-id="${id}" aria-label="이 사진 지우기">지우기</button>`:''}</figure>`;
+  async function draw(){
+    let mine=[];
+    if (!VIEW){ try { mine=await PhotoDB.list(slug); } catch(e){ if (note) note.textContent='이 브라우저에서는 사진을 저장할 수 없어요'; } }
+    if (mode!=='dream' || !box.isConnected) return;
+    photoURLs.splice(0).forEach(u=>URL.revokeObjectURL(u));
+    const shared=(b.images||[]).map(src=>fig(esc(src), b.title+' 사진'));
+    const own=mine.map(p=>{ const u=URL.createObjectURL(p.blob); photoURLs.push(u); return fig(u, b.title+' 사진', p.id); });
+    grid.innerHTML=shared.concat(own).join('');
+    grid.hidden=!grid.children.length;
+  }
+  async function addFiles(files){
+    const imgs=[...files].filter(f=>f.type.startsWith('image/')); if (!imgs.length) return;
+    note.textContent=`사진 ${imgs.length}장을 저장하는 중…`;
+    let ok=0;
+    for (const f of imgs){ try { const r=await shrinkImage(f); await PhotoDB.add(slug, r.blob, r.w, r.h); ok++; } catch(e){} }
+    note.textContent = ok===imgs.length ? `사진 ${ok}장을 저장했어요` : ok ? `${imgs.length}장 중 ${ok}장만 저장했어요` : '사진을 저장하지 못했어요 (저장 공간이 부족할 수 있어요)';
+    draw();
+  }
+  if (input){
+    input.addEventListener('change', ()=>{ addFiles(input.files); input.value=''; });
+    box.addEventListener('dragover', e=>{ e.preventDefault(); box.classList.add('drop'); });
+    box.addEventListener('dragleave', ()=>box.classList.remove('drop'));
+    box.addEventListener('drop', e=>{ e.preventDefault(); box.classList.remove('drop'); addFiles(e.dataTransfer.files); });
+    grid.addEventListener('click', async e=>{
+      const d=e.target.closest('.pdel'); if (!d) return;
+      if (d.dataset.armed!=='1'){ d.dataset.armed='1'; d.textContent='정말 지울까요?'; setTimeout(()=>{ if (d.isConnected){ d.dataset.armed=''; d.textContent='지우기'; } }, 2500); return; }
+      try { await PhotoDB.remove(+d.dataset.id); note.textContent='사진을 지웠어요'; } catch(e){}
+      draw();
+    });
+  }
+  draw();
 }
 
 /* 꿈에서 깨기 */

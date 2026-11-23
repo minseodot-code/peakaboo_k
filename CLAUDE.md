@@ -8,7 +8,7 @@
 - `js/main.js` — 모든 동작 (아래 "동작 흐름" 참고)
 - `js/share.js` — 보기 전용 링크(`?view=`): 주인 화면의 링크 버튼(`#shareView`)이 지금 브라우저의 먹은 책·기록·메모·꽃다발을 압축해 주소에 담음(`makeViewLink()`). 그 주소로 열면 `VIEW`=true: 그 내용만 읽고 아무것도 저장하지 않음, 책 먹기·단축키·꽃 자르기·메모 쓰기 없음, 꽃·더미·모음 페이지로 꿈 보기만(`setupViewMode()`). 링크는 만든 순간의 스냅숏. 페이지 주소는 `./`, `archive`처럼 .html 없이 (서버가 .html 주소를 넘기며 ?view= 를 버림)
 - `archive.html` + `js/archive.js` + `css/archive.css` — 먹은 책 모음 페이지 (오른쪽 책 버튼). 책을 누르면 `index.html#book-제목`으로 그 꿈을 다시 엶
-- `data/books.json` — 실제 책 데이터 (title, author, quotes[{t, p}], note, blog, color(선택)). p(페이지)는 선택: 숫자만 쓰면 'p. 24'로 보임. note는 메모 칸의 처음 내용 (tags는 지금 화면에 안 씀)
+- `data/books.json` — 실제 책 데이터 (title, author, quotes[{t, p}], note, blog, color, images(선택)). images는 누구에게나 보이는 사진 경로 목록(예: `assets/photos/책이름-1.webp`, 보기 전용 링크에서도 보임). p(페이지)는 선택: 숫자만 쓰면 'p. 24'로 보임. note는 메모 칸의 처음 내용 (tags는 지금 화면에 안 씀)
   - 실제 책은 책장 0번 칸 첫 줄부터 순서대로(`.spine.real`, `data-b`=책 번호). 그 외 장식용 책을 누르면 `pickUneaten()`이 안 먹은 실제 책을 고름
 - `assets/fox/*.webp` — 여우 포즈 이미지. 모두 배경 투명, 옆모습은 왼쪽을 봄
 - `assets/meadow/` — 배경 풀밭(field, #stage 배경), 꽃덤불(clump1~5, 지금은 안 씀), 꿈 밤하늘(night). 책장이 안쪽으로 사라지는 안개는 각 칸(.seg)의 mask이고 `setMask()`가 위치를 맞춤 (마스크 앞쪽 3000px은 불투명 여백: 없으면 안쪽으로 들어갈 때 책장 앞부분이 잘려 옆면과 떨어져 보임)
@@ -23,7 +23,7 @@
 3. 커서를 방 안쪽 깊이 잠깐(`DEEP_DWELL` 0.45초) 두면 `cam` 값이 커지며 책장이 끝없이 흘러옴 (`ensureSegs()`가 책장 칸을 만들고 지움)
 4. 책 클릭 → `fetchAndEat(spine)` = `fetchAndSit()`(걸어가서 꺼냄 → 앉아서 읽음) + `eatAndSleep()`(먹음 → 잠 → 꿈)
    - 단축키: `1` = fetchAndSit 후 앉은 채 기다림(mode 'seated'), `2` = 앉아 있으면 eatAndSleep, 서 있으면 처음부터 끝까지. 메모 칸에 글 쓰는 중엔 무시
-5. `enterDream(book)`: 머리 쪽으로 확대 + 물감 번지듯 꿈 화면 → 구절 순서대로 등장. 꿈 페이지(`renderDream()`)는 제목 · 작가 · 인상 깊은 문장(페이지 선택) · 메모. 메모는 책마다 `localStorage` `peakaboo-memo`에 저장(이 브라우저에만), 모음 페이지 카드에도 보임
+5. `enterDream(book)`: 머리 쪽으로 확대 + 물감 번지듯 꿈 화면 → 구절 순서대로 등장. 꿈 페이지(`renderDream()`)는 제목 · 작가 · 인상 깊은 문장(페이지 선택) · 사진 · 메모. 사진(`setupPhotos()`, `js/photos.js`): 올리기·끌어다 놓기·지우기, 긴 변 1600px로 줄여 IndexedDB('peakaboo'/'photos')에 책 slug별 저장(이 브라우저에만, 보기 전용 링크엔 안 담김) + books.json images. 메모는 책마다 `localStorage` `peakaboo-memo`에 저장(이 브라우저에만), 모음 페이지 카드에도 보임
 6. `wake()`: 현실로 복귀 → `addToPile()`로 방금 꿈꾼 책이 입구 근처 '먹은 책 더미'로 날아가 쌓임 → 다시 대기
 - 책꽃: 먹은 책마다 언덕에 그 책 색의 꽃이 핌(`bloomFlower()`, 더미와 같은 `pile` 목록 사용). 꽃 모양·위치는 책 제목 해시로 고정(`flowerSpot()`). 그림은 `assets/flowers/f1~9.webp`, 꽃잎 마스크 `f1m~f9m.webp`(꽃잎에만 책 색을 곱함). 꽃을 누르면 `dreamAgain()`
 - 오른쪽 도구 버튼(`#tools`): 책 모양 = archive.html, 가위 = `askSnip()` → 확인 말풍선(`#snipAsk`, 자를 송이 수 드롭다운 `#snipCount`: 1~핀 꽃 수, 처음엔 전부) → `cutFlowers()`가 먼저 핀(pile 앞쪽) 꽃부터 그 수만큼 자름. 자른 꽃의 책만 pile에서 빠지고 나머지 꽃은 남음

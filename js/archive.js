@@ -68,6 +68,7 @@ $('#clearAsk').addEventListener('click',()=>{ $('#clearAsk').hidden=true; $('#cl
 $('#clearNo').addEventListener('click',()=>{ $('#clearConfirm').hidden=true; $('#clearAsk').hidden=false; $('#clearAsk').focus(); });
 $('#clearYes').addEventListener('click',()=>{
   try { [ARCHIVE_KEY,BOUQUET_KEY,PILE_KEY,MEMO_KEY].forEach(k=>localStorage.removeItem(k)); } catch(e){}
+  PhotoDB.clear().catch(()=>{});   // 꿈 페이지에 올린 사진도
   $('#clearConfirm').hidden=true; $('#clearAsk').hidden=false; main();
 });
 main();

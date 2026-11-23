@@ -371,3 +371,23 @@ html,body{background:var(--cream)}
 body.view-only #shelf{cursor:default}
 body.view-only #spineHL{display:none}
 .memo-view{margin:0;font-family:'Gowun Batang',serif;font-size:17px;line-height:1.8;white-space:pre-line;color:var(--ink)}
+
+/* 꿈 페이지 사진 칸 (js/photos.js, setupPhotos) */
+.dphotos{margin:56px 0 0;border-radius:16px;transition:background .2s,box-shadow .2s}
+.dphotos.drop{background:rgba(243,236,220,.08);box-shadow:0 0 0 2px rgba(243,236,220,.45)}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:16px;align-items:start}
+.ph{position:relative;margin:0;border-radius:12px;overflow:hidden;background:rgba(18,24,44,.3);box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.ph img{display:block;width:100%;height:auto;max-height:420px;object-fit:cover}
+.pgrid:has(.ph:only-child){grid-template-columns:1fr}
+.pgrid:has(.ph:only-child) .ph img{max-height:none;object-fit:contain}
+.pdel{position:absolute;right:8px;top:8px;font:inherit;font-size:12px;padding:5px 10px;border-radius:999px;border:none;cursor:pointer;
+  background:rgba(20,24,40,.62);color:#f3ecdc;opacity:0;transition:opacity .2s}
+.ph:hover .pdel,.pdel:focus-visible,.pdel[data-armed="1"]{opacity:1}
+.pdel:focus-visible{outline:2px solid #f3ecdc;outline-offset:1px}
+.pup{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;padding:9px 18px;border-radius:999px;
+  border:1px dashed rgba(243,236,220,.5);color:var(--ink);transition:background .2s}
+.pup::before{content:"+";font-size:17px;line-height:1}
+.pup:hover,.pup:focus-within{background:rgba(243,236,220,.1)}
+.pup:focus-within{outline:2px solid rgba(243,236,220,.7);outline-offset:2px}
+.pnote{display:block;margin-top:8px;font-size:12px;color:var(--muted)}
+@media (hover:none){ .pdel{opacity:1} }
