@@ -7,10 +7,14 @@
 <title>밑줄 먹는 여우 · 프로토타입</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<link rel="preload" as="image" href="assets/meadow/field.webp">
+<link rel="preload" as="image" href="assets/tex/paper.webp">
 <link rel="stylesheet" href="css/style.css">
 
 </head>
 <body>
+<!-- 처음 들어올 때: 그림을 모두 받아 준비할 때까지 크림색 막으로 덮었다가 한 번에 걷어냄 (js/main.js revealScene) -->
+<div id="curtain" aria-hidden="true"><p>책장을 펼치는 중…</p></div>
 <div id="stage">
   <div id="label">밑줄 먹는 여우 · 프로토타입</div>
   <div id="viewport"><div id="world">
