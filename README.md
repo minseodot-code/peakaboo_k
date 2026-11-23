@@ -42,6 +42,19 @@ python3 -m http.server 8000
 3. Framework Preset은 **Other**, Build Command와 Output Directory는 비워 두면 돼요.
 4. 이후 `main` 브랜치에 push할 때마다 자동으로 다시 배포돼요.
 
+## 보기 전용 링크 `/view` 설정 (한 번만)
+
+다른 사람에게 내 꽃밭을 보여주는 고정 주소 `사이트주소/view`는 꽃밭을 Vercel 저장소에 올려 두고 읽어요.
+링크를 받는 사람은 아무것도 할 필요 없이 누르면 바로 보여요.
+
+1. Vercel 프로젝트 → **Storage** 탭 → **Upstash for Redis** 선택 → 무료 플랜으로 만들고 이 프로젝트에 연결해요.
+   연결하면 `KV_REST_API_URL`, `KV_REST_API_TOKEN` 환경 변수가 자동으로 생겨요.
+2. (선택, 비상용) **Settings → Environment Variables**에 `GARDEN_KEY`(나만 아는 비밀번호)를 넣어 두면,
+   나중에 브라우저를 바꾸거나 기록을 지웠을 때 꽃밭 주인을 새 브라우저로 옮길 수 있어요.
+3. **Deployments**에서 최신 배포를 **Redeploy** 해요.
+4. 평소 쓰는 브라우저에서 사이트 오른쪽 링크 버튼을 한 번 누르면 끝. 그 브라우저가 꽃밭 주인으로 등록되고 `사이트주소/view`가 복사돼요.
+   그 뒤로는 책을 먹거나 꽃을 자르거나 메모를 쓸 때마다 같은 링크에 자동으로 반영돼요.
+
 ## 구조
 
 ```
@@ -50,6 +63,8 @@ css/style.css
 js/main.js
 data/books.json
 assets/fox/      여우 포즈 이미지 (투명 WebP)
-vercel.json      캐시 설정
+js/share.js      보기 전용(/view) 읽기·올리기
+api/garden.js    /view 꽃밭 저장소 (Vercel 서버 함수)
+vercel.json      캐시 설정, /view 주소
 CLAUDE.md        Claude Code 작업 안내
 ```

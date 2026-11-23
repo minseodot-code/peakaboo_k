@@ -42,7 +42,7 @@ async function main(){
     : '아직 여우가 먹은 책이 없어요. 언덕으로 돌아가 책장을 눌러 보세요.';
   $('#books').innerHTML=rows.map(r=>{
     const {b}=bySlug.get(r.s), q=(b.quotes&&b.quotes[0])||{t:'',p:''}, c=color(r.s);
-    return `<a class="card" href="./${viewQuery()}#book-${encodeURIComponent(r.s)}" style="--c:${c}">
+    return `<a class="card" href="${viewHome()}#book-${encodeURIComponent(r.s)}" style="--c:${c}">
       <span class="flw">${flowerHTML(r.s,c,92)}</span>
       <span class="txt">
         <strong>${esc(b.title)}</strong>
@@ -62,12 +62,13 @@ async function main(){
     }).join('');
   }
   $('#clear').hidden=V || !(rows.length||bqs.length);
-  if (V){ document.querySelector('.back').href='./'+viewQuery(); document.title='여우가 먹은 책 · 보기 전용'; if (!rows.length) $('#sum').textContent='아직 여우가 먹은 책이 없어요.'; }
+  if (V){ document.querySelector('.back').href=viewHome(); document.title='여우가 먹은 책 · 보기 전용'; if (!rows.length) $('#sum').textContent='아직 여우가 먹은 책이 없어요.'; }
 }
 $('#clearAsk').addEventListener('click',()=>{ $('#clearAsk').hidden=true; $('#clearConfirm').hidden=false; $('#clearNo').focus(); });
 $('#clearNo').addEventListener('click',()=>{ $('#clearConfirm').hidden=true; $('#clearAsk').hidden=false; $('#clearAsk').focus(); });
 $('#clearYes').addEventListener('click',()=>{
   try { [ARCHIVE_KEY,BOUQUET_KEY,PILE_KEY,MEMO_KEY].forEach(k=>localStorage.removeItem(k)); } catch(e){}
+  publishGarden();   // 보기 전용 /view 도 비움 (비밀번호를 넣어 둔 경우)
   $('#clearConfirm').hidden=true; $('#clearAsk').hidden=false; main();
 });
 main();

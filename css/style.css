@@ -314,20 +314,20 @@ html,body{background:var(--cream)}
 .tool .tip{position:absolute;right:62px;top:50%;transform:translate(6px,-50%);white-space:nowrap;font-size:13px;color:#5f5446;
   background:rgba(244,241,230,.94);padding:6px 12px;border-radius:999px;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s}
 .tool:hover .tip,.tool:focus-visible .tip{opacity:1;transform:translate(0,-50%)}
-#snipAsk{position:absolute;right:66px;bottom:-6px;width:260px;padding:18px 18px 16px;border-radius:18px;color:#4a3f32;
+:is(#snipAsk,#keyAsk){position:absolute;right:66px;bottom:-6px;width:260px;padding:18px 18px 16px;border-radius:18px;color:#4a3f32;
   background:#f6efdf url(../assets/tex/paper.webp);border:1.5px solid rgba(91,67,48,.45);box-shadow:0 10px 30px rgba(80,60,30,.2)}
-#snipAsk p{margin:0 0 8px;font-family:'Gowun Batang',serif;font-size:16px;line-height:1.6}
-#snipAsk small{display:block;color:#857865;font-size:12px;line-height:1.5;margin-bottom:14px}
-#snipAsk .ask-btns{display:flex;gap:8px}
-#snipAsk p+.ask-pick{margin-top:-4px}
+:is(#snipAsk,#keyAsk) p{margin:0 0 8px;font-family:'Gowun Batang',serif;font-size:16px;line-height:1.6}
+:is(#snipAsk,#keyAsk) small{display:block;color:#857865;font-size:12px;line-height:1.5;margin-bottom:14px}
+:is(#snipAsk,#keyAsk) .ask-btns{display:flex;gap:8px}
+:is(#snipAsk,#keyAsk) p+.ask-pick{margin-top:-4px}
 .ask-pick{display:flex;align-items:center;gap:8px;margin:0 0 6px;font-family:'Gowun Batang',serif;font-size:16px}
 #snipCount{font:inherit;font-size:16px;font-weight:700;color:#3B342A;padding:4px 30px 4px 12px;border-radius:10px;cursor:pointer;
   border:1.5px solid rgba(91,67,48,.45);background:#fbf6ea url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%235B4330' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E") right 10px center/11px 8px no-repeat;
   -webkit-appearance:none;appearance:none}
 #snipCount:focus-visible{outline:2px solid #8a9ba8;outline-offset:2px}
-#snipAsk button{font-family:inherit;font-size:13px;padding:8px 14px;border-radius:999px;cursor:pointer;border:1px solid #bfb29a;background:transparent;color:#4a3f32}
-#snipAsk .ask-yes{background:#3B342A;color:#f3ede1;border-color:#3B342A}
-#snipAsk button:focus-visible{outline:2px solid #8a9ba8;outline-offset:2px}
+:is(#snipAsk,#keyAsk) button{font-family:inherit;font-size:13px;padding:8px 14px;border-radius:999px;cursor:pointer;border:1px solid #bfb29a;background:transparent;color:#4a3f32}
+:is(#snipAsk,#keyAsk) .ask-yes{background:#3B342A;color:#f3ede1;border-color:#3B342A}
+:is(#snipAsk,#keyAsk) button:focus-visible{outline:2px solid #8a9ba8;outline-offset:2px}
 
 /* 꽃다발: 여우 그림(r_give) 위에 같은 크기 층(#giveLayer)을 겹치고 [꽃들] 위에 [앞쪽 포장지·앞발]을 덮음 */
 #giveLayer{position:absolute;z-index:7;pointer-events:none}
@@ -348,7 +348,7 @@ html,body{background:var(--cream)}
 #giftCard .g3{margin:0 0 14px;font-size:12px;color:#8a7d69;line-height:1.6}
 #giftCard button{font-family:inherit;font-size:14px;padding:11px 22px;border-radius:999px;border:none;background:#3B342A;color:#f3ede1;cursor:pointer}
 #giftCard button:focus-visible{outline:2px solid #8a9ba8;outline-offset:3px}
-@media (max-width:700px){ #tools{right:12px;gap:10px} .tool{width:44px;height:44px} #snipAsk{right:56px;width:230px} }
+@media (max-width:700px){ #tools{right:12px;gap:10px} .tool{width:44px;height:44px} :is(#snipAsk,#keyAsk){right:56px;width:230px} }
 @media (prefers-reduced-motion:reduce){ #giftCard{transition:opacity .3s} .tool{transition:none} }
 
 /* 먼 책장 캔버스(js drawFar): 풀밭 배경 위, 3D 방 아래 */
@@ -371,3 +371,7 @@ html,body{background:var(--cream)}
 body.view-only #shelf{cursor:default}
 body.view-only #spineHL{display:none}
 .memo-view{margin:0;font-family:'Gowun Batang',serif;font-size:17px;line-height:1.8;white-space:pre-line;color:var(--ink)}
+
+#gardenKey{display:block;width:100%;box-sizing:border-box;margin:4px 0 8px;padding:9px 12px;border-radius:10px;font:inherit;font-size:15px;
+  border:1.5px solid rgba(91,67,48,.45);background:#fbf6ea;color:#3B342A}
+#gardenKey:focus-visible{outline:2px solid #8a9ba8;outline-offset:2px}

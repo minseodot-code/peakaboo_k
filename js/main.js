@@ -41,13 +41,13 @@ function loadPile(){
 /* 먹은 책 기록(아카이브): 꽃을 잘라도 남음. archive.html 이 이 기록으로 '먹은 책 모음' 페이지를 그림. [{s:책 slug, t:처음 먹은 시각}] */
 const ARCHIVE_KEY='peakaboo-archive', BOUQUET_KEY='peakaboo-bouquets';
 function readList(key){ if (VIEW) return key===ARCHIVE_KEY ? viewData.a.map(([s,t])=>({s,t})) : key===BOUQUET_KEY ? viewData.b : []; try { const v=JSON.parse(localStorage.getItem(key)||'[]'); return Array.isArray(v)?v:[]; } catch(e){ return []; } }
-function writeList(key,v){ if (VIEW) return; try { localStorage.setItem(key, JSON.stringify(v)); } catch(e){} }
+function writeList(key,v){ if (VIEW) return; schedulePublish(); try { localStorage.setItem(key, JSON.stringify(v)); } catch(e){} }
 function recordArchive(idx){
   const a=readList(ARCHIVE_KEY), have=new Set(a.map(r=>r.s)); let ch=false;
   for (const i of idx){ const sl=bookSlug(BOOKS[i]); if (!have.has(sl)){ a.push({s:sl,t:Date.now()}); have.add(sl); ch=true; } }
   if (ch) writeList(ARCHIVE_KEY,a);
 }
-function savePile(){ if (VIEW) return; try { localStorage.setItem(PILE_KEY, JSON.stringify(pile.map(i=>bookSlug(BOOKS[i])))); } catch(e){} }
+function savePile(){ if (VIEW) return; schedulePublish(); try { localStorage.setItem(PILE_KEY, JSON.stringify(pile.map(i=>bookSlug(BOOKS[i])))); } catch(e){} }
 function pileBook(i,k){
   const b=BOOKS[i], r=rng(k*131+7), el=document.createElement('button');
   el.type='button'; el.className='pbook'; el.dataset.b=i; el.title=b.title;
@@ -935,7 +935,7 @@ function renderDream(b){
   if (!ta) return;
   const fit=()=>{ ta.style.height='auto'; ta.style.height=Math.max(ta.scrollHeight,84)+'px'; };
   ta.addEventListener('input', ()=>{ fit(); clearTimeout(tmr); st.textContent='저장하는 중…';
-    tmr=setTimeout(()=>{ const m=readMemos(); m[slug]=ta.value; try { localStorage.setItem(MEMO_KEY, JSON.stringify(m)); st.textContent='저장했어요'; } catch(e){ st.textContent='저장하지 못했어요'; } }, 400); });
+    tmr=setTimeout(()=>{ const m=readMemos(); m[slug]=ta.value; try { localStorage.setItem(MEMO_KEY, JSON.stringify(m)); st.textContent='저장했어요'; schedulePublish(); } catch(e){ st.textContent='저장하지 못했어요'; } }, 400); });
   ta.addEventListener('keydown', e=>{ if (e.key==='Escape'){ e.stopPropagation(); ta.blur(); } });   // 메모 중 Esc는 글쓰기만 끝냄 (한 번 더 누르면 꿈에서 깸)
   requestAnimationFrame(fit);
 }
@@ -1139,16 +1139,46 @@ function setupViewMode(){
   document.body.classList.add('view-only');
   $('#label').textContent='밑줄 먹는 여우 · 보기 전용';
   hint.textContent = pile.length ? '커서를 움직이면 여우가 따라와요 · 풀밭의 꽃을 누르면 그 책의 꿈을 꿔요' : '아직 핀 꽃이 없어요';
-  $('#snip').hidden=true; $('#shareView').hidden=true; snipAsk.hidden=true;
-  $('#toArchive').href='archive'+viewQuery();   // .html 을 붙이면 서버가 깨끗한 주소로 넘기며 ?view= 를 버릴 수 있음
+  $('#snip').hidden=true; $('#shareView').hidden=true; snipAsk.hidden=true; keyAsk.hidden=true;
+  $('#toArchive').href='/archive'+viewQuery();   // .html 을 붙이면 서버가 깨끗한 주소로 넘기며 ?view= 를 버릴 수 있음
   shelf.setAttribute('aria-label','책장 (보기 전용)'); shelf.removeAttribute('role');
 }
-$('#shareView').addEventListener('click', async ()=>{
-  if (!pile.length && !readList(ARCHIVE_KEY).length){ flash('아직 먹은 책이 없어요. 책을 먹으면 꽃이 피어요'); return; }
-  const url=await makeViewLink();
-  try { await Promise.race([navigator.clipboard.writeText(url), new Promise((_,rej)=>setTimeout(rej,1500))]); flash('보기 전용 링크를 복사했어요 · 지금 꽃밭 그대로 보여줘요'); }
-  catch(e){ prompt('보기 전용 링크', url); }
-});
+/* 보기 전용 링크 버튼: 꽃밭을 서버에 올리고 고정 주소 /view 를 복사. 처음 누른 브라우저가 꽃밭 주인으로 등록됨(입력 없음).
+   다른 브라우저가 이미 주인이면, 비상용 비밀번호(GARDEN_KEY)를 넣어 주인을 이 브라우저로 옮길 수 있음(#keyAsk) */
+const keyAsk=$('#keyAsk'), keyIn=$('#gardenKey'), keyMsg=keyAsk.querySelector('.key-msg');
+const KEY_HELP=keyMsg.textContent;
+function openKeyAsk(msg){ keyMsg.textContent=msg||KEY_HELP; keyAsk.hidden=false; $('#shareView').setAttribute('aria-expanded','true'); keyIn.value=''; keyIn.focus(); }
+function closeKeyAsk(){ keyAsk.hidden=true; $('#shareView').setAttribute('aria-expanded','false'); }
+async function copyViewURL(){
+  try { await Promise.race([navigator.clipboard.writeText(VIEW_URL), new Promise((_,rej)=>setTimeout(rej,1500))]);
+    flash(`보기 전용 링크를 복사했어요 · ${VIEW_URL.replace(/^https?:\/\//,'')} · 꽃밭이 바뀌면 같은 링크에 자동으로 보여요`); }
+  catch(e){ flash('보기 전용 링크: '+VIEW_URL); }
+}
+function publishTrouble(r){
+  if (r==='not-set-up') flash('아직 꽃밭 저장소가 연결되지 않았어요 (README의 /view 설정을 봐 주세요)');
+  else flash('꽃밭을 올리지 못했어요. 잠시 뒤 다시 눌러 주세요');
+}
+async function onShareView(){
+  if (!keyAsk.hidden){ closeKeyAsk(); return; }
+  const r=await publishGarden();
+  if (r==='ok') return copyViewURL();
+  if (r==='not-owner') return openKeyAsk();
+  publishTrouble(r);
+}
+async function submitKey(){
+  const key=keyIn.value.trim(); if (!key){ keyIn.focus(); return; }
+  keyMsg.textContent='확인하는 중…';
+  const r=await publishGarden(key);
+  if (r==='ok'){ closeKeyAsk(); return copyViewURL(); }
+  if (r==='wrong-key'){ keyMsg.textContent='비밀번호가 달라요. 다시 확인해 주세요'; keyIn.select(); return; }
+  closeKeyAsk(); publishTrouble(r);
+}
+$('#shareView').setAttribute('aria-haspopup','dialog');
+$('#shareView').addEventListener('click', onShareView);
+keyAsk.querySelector('.key-yes').addEventListener('click', submitKey);
+keyAsk.querySelector('.key-no').addEventListener('click', ()=>{ closeKeyAsk(); $('#shareView').focus(); });
+keyIn.addEventListener('keydown', e=>{ if (e.key==='Enter'){ e.preventDefault(); submitKey(); } });
+keyAsk.addEventListener('keydown', e=>{ if (e.key==='Escape'){ closeKeyAsk(); $('#shareView').focus(); } });
 
 /* 입력 */
 function pickSpine(e){
