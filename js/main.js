@@ -53,7 +53,8 @@ function pileBook(i,k){
   el.type='button'; el.className='pbook'; el.dataset.b=i; el.title=b.title;
   el.setAttribute('aria-label',`${b.title} 다시 꿈꾸기`);
   el.style.setProperty('--c', bookColor(b)||PALETTE[(i*5)%PALETTE.length]);
-  el.style.width=Math.round(100+r()*34)+'px'; el.style.height=Math.round(19+r()*7)+'px';
+  const w=Math.round(104+r()*30); el.style.width=w+'px'; el.style.height=Math.round(w*LAY_AR*(.19+r()*.04))+'px';   // 보이는 띠 = 책 두께, 그림은 위로 올라옴
+  el.style.setProperty('--ih', Math.round(w*LAY_AR)+'px');
   el.style.setProperty('--rot',(r()*7-3.5).toFixed(1)+'deg'); el.style.setProperty('--off',Math.round(r()*14-7)+'px');
   return el;
 }
@@ -65,7 +66,7 @@ function renderPile(){
     tallest=Math.max(tallest,hsum); pileEl.appendChild(st);
   }
   // 라벨은 더미 위에 띄움 (바닥 아래로 내려가면 바닥 판에 가려짐)
-  const lab=document.createElement('div'); lab.className='plabel'; lab.style.bottom=(tallest+16)+'px';
+  const lab=document.createElement('div'); lab.className='plabel'; lab.style.bottom=(tallest+Math.round(118*LAY_AR*.8)+10)+'px';
   lab.textContent=pile.length?`여우가 먹은 책 ${pile.length}권`:''; pileEl.appendChild(lab);
 }
 function placePile(){
@@ -121,6 +122,22 @@ function bloomFlower(i){
   el.classList.add('blooming'); setTimeout(()=>el.classList.remove('blooming'), 1700/SPD);
 }
 gardenEl.addEventListener('click', e=>{ const f=e.target.closest('.bflower'); if (f) dreamAgain(+f.dataset.b); });
+/* 손으로 그린 책 그림(assets/book): 날아가는 책은 여러 방향 그림(fly_a 옆 → fly_b 비스듬히 → fly_c 표지 / lay 눕힌 책)을
+   차례로 겹쳐 바꿔 보여줌. 그림은 밝은 무색 표지라 표지 모양 마스크(…m.webp)로 책 색을 곱해 입힘 */
+const LAY_AR=246/340;   // 눕힌 책 그림 세로/가로
+function makeFlyBook(color, views){
+  const el=document.createElement('div'); el.className='flybook';
+  el.style.setProperty('--cover', color);
+  el.innerHTML=views.map((v,k)=>`<span class="fb fb-${v}" style="opacity:${k?0:1}"><i></i></span>`).join('');
+  return el;
+}
+function swapViews(fly, dur){      // 비행 시간 동안 그림을 앞 방향에서 다음 방향으로 겹쳐 바꿈
+  const L=[...fly.children], n=L.length; if (n<2) return;
+  L.forEach((el,k)=>{
+    const kf=[]; for (let j=0;j<n;j++){ kf.push({opacity:j===k?1:0, offset:j/(n-1)}); }
+    el.animate(kf,{duration:dur,easing:'ease-in-out',fill:'forwards'});
+  });
+}
 async function addToPile(i){
   if (i==null || (VIEW && !pile.includes(i))) return;
   if (pile.includes(i)){                     // 이미 쌓인 책이면 그 책만 살짝 반짝
@@ -132,14 +149,14 @@ async function addToPile(i){
   const el=pileEl.querySelector(`.pbook[data-b="${i}"]`); if (!el) return;
   const to=el.getBoundingClientRect(), from=headPoint();
   el.style.visibility='hidden';
-  const fly=document.createElement('div'); fly.className='flybook';
-  fly.style.setProperty('--cover', getComputedStyle(el).getPropertyValue('--c'));
-  Object.assign(fly.style,{left:from.x+'px',top:from.y+'px',width:'26px',height:'34px'});
-  document.body.appendChild(fly);
+  const fly=makeFlyBook(getComputedStyle(el).getPropertyValue('--c'), ['c','lay']);
+  const th=to.width*LAY_AR, tt=to.bottom-th;          // 더미 책은 그림이 띠 위로 올라와 있음
+  Object.assign(fly.style,{left:from.x+'px',top:from.y+'px',width:'26px',height:'36px'});
+  document.body.appendChild(fly); swapViews(fly, 900/SPD);
   await fly.animate([
-    {left:from.x+'px',top:from.y+'px',width:'26px',height:'34px',transform:'rotate(0deg)'},
-    {left:((from.x+to.left)/2)+'px',top:(Math.min(from.y,to.top)-90)+'px',width:'40px',height:'26px',transform:'rotate(-160deg)',offset:.55},
-    {left:to.left+'px',top:to.top+'px',width:to.width+'px',height:to.height+'px',transform:'rotate(-360deg)'}
+    {left:from.x+'px',top:from.y+'px',width:'26px',height:'36px',transform:'rotate(0deg)'},
+    {left:((from.x+to.left)/2)+'px',top:(Math.min(from.y,tt)-90)+'px',width:'44px',height:'40px',transform:'rotate(-160deg)',offset:.55},
+    {left:to.left+'px',top:tt+'px',width:to.width+'px',height:th+'px',transform:'rotate(-360deg)'}
   ],{duration:900/SPD,easing:'cubic-bezier(.3,.7,.4,1)',fill:'forwards'}).finished;
   fly.remove(); el.style.visibility='';
   el.animate([{transform:'translateX(var(--off)) translateY(-6px) rotate(var(--rot))'},{transform:'translateX(var(--off)) rotate(var(--rot))'}],{duration:260,easing:'cubic-bezier(.3,1.6,.6,1)'});
@@ -673,10 +690,10 @@ async function fetchAndSit(chosen){
   if (imgOK && POSES.carry){
     // 동그란 여우: 책이 포물선을 그리며 날아와 품에 안김 → 책 안은 그림(carry)으로 바뀜
     held.className='';
-    const t=poseAnchor('carry', POSES.carry.bookAt), bw=34*t.k, bh=46*t.k;
-    const fly=document.createElement('div'); fly.className='flybook';
-    Object.assign(fly.style,{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px','--cover':color});
-    document.body.appendChild(fly); spine.classList.add('gone'); goneSet.add(spine.dataset.id);
+    const t=poseAnchor('carry', POSES.carry.bookAt), bw=32*t.k, bh=46*t.k;
+    const fly=makeFlyBook(color, ['a','b','c']);      // 책장에서 빠질 땐 옆모습 → 비스듬히 → 표지
+    Object.assign(fly.style,{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px'});
+    document.body.appendChild(fly); swapViews(fly, 800/SPD); spine.classList.add('gone'); goneSet.add(spine.dataset.id);
     await fly.animate([
       {left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px',transform:'rotate(0deg)'},
       {left:(r.left+(t.x-bw/2-r.left)*.5)+'px',top:(Math.min(r.top,t.y)-60)+'px',width:bw+'px',height:bh+'px',transform:'rotate(-30deg)',offset:.55},
@@ -688,9 +705,9 @@ async function fetchAndSit(chosen){
     // 책장에서 빠져나온 책이 포물선을 그리며 여우 입으로 날아가 물림
     held.className='closed hidden'; positionHeld();
     const hr=held.querySelector('.cover').getBoundingClientRect();
-    const fly=document.createElement('div'); fly.className='flybook';
-    Object.assign(fly.style,{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px','--cover':color});
-    document.body.appendChild(fly); spine.classList.add('gone'); goneSet.add(spine.dataset.id);
+    const fly=makeFlyBook(color, ['a','b','c']);
+    Object.assign(fly.style,{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px'});
+    document.body.appendChild(fly); swapViews(fly, 800/SPD); spine.classList.add('gone'); goneSet.add(spine.dataset.id);
     const rot=facing==='right'?16:-16;
     await fly.animate([
       {left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px',transform:'rotate(0deg)'},
@@ -700,8 +717,8 @@ async function fetchAndSit(chosen){
     held.className='closed'; fly.remove();
     await wait(250);
   } else {
-    const fly=document.createElement('div'); fly.className='flybook';
-    Object.assign(fly.style,{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px',background:color});
+    const fly=makeFlyBook(color, ['a','b','c']);
+    Object.assign(fly.style,{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px'});
     document.body.appendChild(fly); spine.classList.add('gone'); goneSet.add(spine.dataset.id);
     const fr=fox.getBoundingClientRect();
     const tx=fr.left+fr.width*0.38-r.left, ty=fr.top+fr.height*0.5-r.top;
