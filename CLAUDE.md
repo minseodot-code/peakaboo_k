@@ -16,6 +16,8 @@
 - `assets/book/` — 손으로 그린 책 한 권(미드저니): 날아가는 책 `fly_a`(옆)·`fly_b`(비스듬히)·`fly_c`(표지), 먹은 책 더미 `lay`(눕힌 책). 표지는 무색이고 `*_mask.webp`(투명도 = 표지 모양)로 책 색을 곱해 입힘. 날아가는 책은 `makeFlyBook(color, views)` + `swapViews()`가 방향 그림을 차례로 바꿔 보여줌. 더미 책 버튼은 책 두께만큼의 띠이고 그림(::before/::after)은 그 위로 올라옴. 마스크는 꼭 투명도로 만들 것 (회색조 그림이면 네모 판으로 칠해짐)
 - `assets/books/*.webp` — 손으로 그린 책등 그림. `js/main.js`의 `PAINTED`(파일 이름, 가로/세로 비율 ar, 평균 색 c) 목록에서 골라 책장을 채움. 새 책등을 추가하면 파일을 넣고 `PAINTED`에 한 줄 추가
 
+- 글꼴: 은디나루 하나만 씀(`assets/fonts/undinaru-v1.woff2`, 굵게 `undinaru-bold-v1.woff2`, 출처·조건은 `assets/fonts/README.md`). @font-face는 css/style.css·css/archive.css 맨 위, 두 html에서 preload. 외부 글꼴(구글 폰트 등) 링크를 다시 넣지 말 것
+
 빌드 도구 없는 정적 사이트. 라이브러리 추가 없이 순수 HTML/CSS/JS로 유지할 것.
 
 ## 동작 흐름 (js/main.js)
