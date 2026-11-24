@@ -11,6 +11,14 @@ main{max-width:980px;margin:0 auto;padding:40px 24px 64px}
 header h1{font-family:'UnDinaru',sans-serif;font-weight:700;font-size:clamp(28px,4vw,38px);margin:0 0 8px}
 header p{color:#7a6e5c;margin:0 0 36px;font-size:15px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.search{margin:-14px 0 26px}
+.search input{width:100%;max-width:420px;font:inherit;font-size:15px;color:#3B342A;padding:11px 18px 11px 42px;border-radius:999px;
+  border:1px solid rgba(91,67,48,.28);background:rgba(250,245,233,.9) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a7d69' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M16 16l4.5 4.5'/%3E%3C/svg%3E") 15px 50%/18px no-repeat}
+.search input:focus{outline:none;border-color:#8a9ba8;box-shadow:0 0 0 3px rgba(138,155,168,.25)}
+.search input::placeholder{color:#a3967f}
+#found{margin:10px 4px 0;font-size:13px;color:#7a6e5c;min-height:1em}
+#found:empty{display:none}
+.card[hidden]{display:none}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px}
 .card{position:relative;display:flex;gap:14px;align-items:flex-end;padding:18px 18px 16px 22px;border-radius:14px;text-decoration:none;color:inherit;
   background:rgba(250,245,233,.86);border:1px solid rgba(91,67,48,.25);box-shadow:0 2px 8px rgba(90,70,40,.08);transition:transform .25s,box-shadow .25s;overflow:hidden}

@@ -3,8 +3,12 @@
    - 기록한 책(꽃·더미·책장 맨 앞 칸)을 다시 꿈꾸면 읽기 화면, '고쳐 쓰기'로 같은 자리에서 고침(editingBook)
    - 저장: 이 브라우저 localStorage 'peakaboo-books'(책 목록) + 'peakaboo-memo'(메모) → 보기 전용 /view 에도 자동으로 올라감(schedulePublish)
    - 기록하면 책장 맨 앞 칸에 그 색의 책으로 꽂히고, 깨면 더미·꽃밭에 들어가며 먹은 책 모음(archive)에 쌓임
+   - 같은 책을 여러 번 기록할 수 있음: 기록마다 메모·꽃이 따로(이름표 '책-이름~2'…, uniqueSlug)
    - 책 이름을 바꾸거나 지우면 더미·기록·메모·꽃다발 이름표(slug)도 맞춤 */
 let editingBook=null;
+function ordinal(n){ return (['첫','두','세','네','다섯','여섯','일곱','여덟','아홉','열'][n-1]||n)+' 번째'; }
+/* 이름표가 겹치면 '~2', '~3'…을 붙임 */
+function uniqueSlug(base, list){ const used=new Set(list.map(bookSlug)); if (!used.has(base)) return base; let n=2; while (used.has(base+'~'+n)) n++; return base+'~'+n; }
 function newDraft(color){ return {draft:true, title:'', author:'', quotes:[], color: /^#[0-9a-f]{6}$/i.test(color||'')?color:'#B39573'}; }
 
 /* 책 이름표(slug)가 바뀌거나(to) 책이 지워질 때(to=null) 더미·기록·메모·꽃다발을 맞춤 */
@@ -82,9 +86,12 @@ function saveFromDream(b){
   const f=readEditor(), msg=dreamInner.querySelector('.ed-msg');
   if (!f) return false;
   if (!f.title){ msg.textContent='책 이름을 적어 주세요'; dreamInner.querySelector('.ed-title').focus(); return false; }
-  const list=(readMyBooks()||[]).slice(), slug=bookSlug(f), oldIdx=b.draft?-1:list.findIndex(x=>bookSlug(x)===bookSlug(b));
-  if (list.some((x,i)=>i!==oldIdx && bookSlug(x)===slug)){ msg.textContent='같은 이름의 책이 이미 있어요. 이름을 조금 바꿔 주세요'; return false; }
-  const book={...(oldIdx>=0?list[oldIdx]:{}), title:f.title, author:f.author, quotes:f.quotes, color:b.color||'#B39573', t:(oldIdx>=0&&list[oldIdx].t)||Date.now()};
+  const list=(readMyBooks()||[]).slice(), oldIdx=b.draft?-1:list.findIndex(x=>bookSlug(x)===bookSlug(b)), old=oldIdx>=0?list[oldIdx]:null;
+  // 같은 이름의 책이 이미 있어도 따로 기록함: 이름이 그대로면 원래 이름표, 새 기록이거나 이름을 바꿨으면 겹치지 않는 이름표
+  const others=list.filter((_,i)=>i!==oldIdx);
+  const slug=(old && titleSlug(old)===titleSlug(f)) ? bookSlug(old) : uniqueSlug(titleSlug(f), others);
+  const same=others.filter(x=>titleSlug(x)===titleSlug(f)).length;   // 같은 이름으로 먼저 남긴 기록 수
+  const book={...(old||{}), id:slug, title:f.title, author:f.author, quotes:f.quotes, color:b.color||'#B39573', t:(old&&old.t)||Date.now()};
   delete book.draft;
   if (oldIdx>=0){ const from=bookSlug(list[oldIdx]); list[oldIdx]=book; if (from!==slug) migrateSlug(from, slug); }
   else list.unshift(book);                                   // 새 기록은 책장 맨 앞 칸에
@@ -94,7 +101,7 @@ function saveFromDream(b){
   editingBook=null;
   const saved=BOOKS.find(x=>bookSlug(x)===slug);
   renderDream(saved); setDreamHash(saved); revealOnScroll(dreamSeq);
-  flash(b.draft ? '기록했어요 · 깨어나면 먹은 책 더미와 꽃밭에 들어가요' : '고친 내용을 저장했어요');
+  flash(b.draft ? (same ? `같은 책의 ${ordinal(same+1)} 기록으로 남겼어요 · 깨어나면 꽃이 하나 더 피어요` : '기록했어요 · 깨어나면 먹은 책 더미와 꽃밭에 들어가요') : '고친 내용을 저장했어요');
   return true;
 }
 function deleteFromDream(b, btn){
