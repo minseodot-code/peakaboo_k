@@ -8,8 +8,8 @@
 - `js/main.js` — 모든 동작 (아래 "동작 흐름" 참고)
 - `js/share.js` + `api/garden.js` — 보기 전용 고정 주소 `/view`(vercel.json rewrite → `/`. cleanUrls라 목적지에 .html을 쓰면 404, 모음 페이지는 `/archive?view`): 서버 함수 `/api/garden`(라이브러리 없음, Upstash Redis REST, 환경 변수 KV_REST_API_URL/TOKEN)에 올린 꽃밭(먹은 책·기록·메모·꽃다발)을 읽음. 올리기는 '주인 표'(localStorage `peakaboo-owner`, 헤더 `x-garden-owner`)로: 링크 버튼(`#shareView`)을 처음 누른 브라우저가 입력 없이 주인으로 등록(서버 `peakaboo:owner`에 해시), 그 뒤로 그 브라우저에서만 `savePile`/`writeList`/메모 저장 때마다 `schedulePublish()`가 자동으로 올림(`peakaboo-owned`). 다른 브라우저는 403 → `#keyAsk`에서 비상용 환경 변수 `GARDEN_KEY`(선택)를 넣으면 주인을 옮김. `VIEW`=true면 그 내용만 읽고 아무것도 저장하지 않음, 책 먹기·단축키·꽃 자르기·메모 쓰기 없음(`setupViewMode()`). 예전 `?view=<압축>` 링크도 계속 열림. 로컬 `npx serve`로는 /view·/api가 안 돌아감(Vercel 또는 비슷한 테스트 서버 필요)
 - `archive.html` + `js/archive.js` + `css/archive.css` — 먹은 책 모음 페이지 (오른쪽 책 버튼). 책을 누르면 `index.html#book-제목`으로 그 꿈을 다시 엶
-- `js/write.js` — 책 기록하기: 오른쪽 연필 버튼(`#writeBook`) = 새 책, 꿈 페이지 '고쳐 쓰기'(`#editBook`) = 고치기·지우기. 책 이름·작가·구절(페이지 선택)·짧은 메모·책 색을 창(`#bookForm`)에 써서 저장. 책 목록은 localStorage `peakaboo-books`(처음 저장 때 books.json 내용을 색까지 고정해 옮겨 옴, 그 뒤로 이것이 기준, `loadBooks()`가 우선 읽음), 메모는 `peakaboo-memo`. 새 책은 책장 맨 앞(BOOKS 맨 앞)에 꽂히고 '저장하고 여우에게 건네기'면 여우가 바로 꺼내 먹음. 이름을 바꾸거나 지우면 `migrateSlug()`로 더미·기록·메모·꽃다발 이름표를 맞추고 `commitBooks()`가 맨 앞 칸·더미·꽃밭을 다시 그림. 보기 전용에는 책 목록이 `k`로 함께 올라감(api/garden.js가 정리해 저장)
-- `data/books.json` — 처음 책 데이터(사이트에서 책을 쓰기 전까지 쓰임) (title, author, quotes[{t, p}], note, blog, color(선택)). p(페이지)는 선택: 숫자만 쓰면 'p. 24'로 보임. note는 메모 칸의 처음 내용 (tags는 지금 화면에 안 씀)
+- `js/write.js` — 책 기록하기 = 꿈 페이지. 책장의 기록 안 된 책(장식 책)을 먹으면 `newDraft(책등 색)` → 꿈 페이지가 쓰기 화면(`renderEditor()`: 책 이름·작가·구절+페이지(선택)·메모) → '기록하기'(`saveFromDream()`). 기록한 책(책장 맨 앞 칸 `.spine.real`, 꽃, 더미)은 읽기 화면, '고쳐 쓰기'(`editingBook`)로 같은 자리에서 고치기·지우기. 깰 때(`beforeWake()`): 책 이름이 있으면 자동 저장, 이름 없이 뭔가 썼으면 한 번 물어봄. 책 목록은 localStorage `peakaboo-books`(`loadBooks()`가 읽음, 예시 책 없음), 메모는 `peakaboo-memo`. 새 기록은 BOOKS 맨 앞 = 책장 맨 앞 칸. 이름을 바꾸거나 지우면 `migrateSlug()`, `commitBooks()`가 맨 앞 칸·더미·꽃밭을 다시 그림. 보기 전용엔 책 목록이 `k`로 함께 올라감(api/garden.js가 정리해 저장)
+- `data/books.json` — 예전 예시 책 데이터 (지금은 화면에서 쓰지 않음) (title, author, quotes[{t, p}], note, blog, color(선택)). p(페이지)는 선택: 숫자만 쓰면 'p. 24'로 보임. note는 메모 칸의 처음 내용 (tags는 지금 화면에 안 씀)
   - 실제 책은 책장 0번 칸 첫 줄부터 순서대로(`.spine.real`, `data-b`=책 번호). 그 외 장식용 책을 누르면 `pickUneaten()`이 안 먹은 실제 책을 고름
 - `assets/fox/*.webp` — 여우 포즈 이미지. 모두 배경 투명, 옆모습은 왼쪽을 봄
 - `assets/meadow/` — 배경 풀밭(field, #stage 배경), 꽃덤불(clump1~5, 지금은 안 씀), 꿈 밤하늘(night). 책장이 안쪽으로 사라지는 안개는 각 칸(.seg)의 mask이고 `setMask()`가 위치를 맞춤 (마스크 앞쪽 3000px은 불투명 여백: 없으면 안쪽으로 들어갈 때 책장 앞부분이 잘려 옆면과 떨어져 보임)
@@ -22,7 +22,7 @@
 1. `start()` → 크림색 막(#curtain)으로 덮은 채 책 데이터 + 첫 화면 그림(`sceneImages()`: 배경·책등·꽃·더미 책, 그리고 여우는 걷기·서기·돌기만)을 받아 decode까지 마침(최대 `SCENE_WAIT` 9초) → 책장을 만든 다음 프레임에 막을 걷음(`revealScene()`) → 나머지 여우 그림은 그 뒤 `foxRest()`로 뒤에서 받음. 첫 화면에 새 그림을 더하면 `sceneImages()`에도 넣을 것 → `intro()`: 오른쪽에서 기어 나와 책장 앞에 섬 (걸어오는 시간 8초, 서기까지 약 9초. 등장 중 책장을 누르면 서자마자 그 책을 꺼냄. `intro()`의 `T`로 조절)
 2. 대기: 커서가 있으면 `tick()`이 커서를 따라감, 없으면 `idle()`이 혼자 서성임. 커서가 오른쪽 버튼(둘레 90px 포함)·말풍선 위면 `uiHold`로 멈춰 섬
 3. 커서를 방 안쪽 깊이 잠깐(`DEEP_DWELL` 0.45초) 두면 `cam` 값이 커지며 책장이 끝없이 흘러옴 (`ensureSegs()`가 책장 칸을 만들고 지움)
-4. 책 클릭 → `fetchAndEat(spine)` = `fetchAndSit()`(걸어가서 꺼냄 → 앉아서 읽음) + `eatAndSleep()`(먹음 → 잠 → 꿈)
+4. 책 클릭 → `fetchAndEat(spine)` = `fetchAndSit()`(걸어가서 꺼냄 → 앉아서 읽음) + `eatAndSleep()`(먹음 → 잠 → 꿈). 기록 안 된 책이면 꿈 페이지에서 기록(js/write.js)
    - 단축키: `1` = fetchAndSit 후 앉은 채 기다림(mode 'seated'), `2` = 앉아 있으면 eatAndSleep, 서 있으면 처음부터 끝까지. 메모 칸에 글 쓰는 중엔 무시
 5. `enterDream(book)`: 머리 쪽으로 확대 + 물감 번지듯 꿈 화면 → 구절 순서대로 등장. 꿈 페이지(`renderDream()`)는 제목 · 작가 · 인상 깊은 문장(페이지 선택) · 메모. 메모는 책마다 `localStorage` `peakaboo-memo`에 저장(이 브라우저에만), 모음 페이지 카드에도 보임
 6. `wake()`: 현실로 복귀 → `addToPile()`로 방금 꿈꾼 책이 입구 근처 '먹은 책 더미'로 날아가 쌓임 → 다시 대기

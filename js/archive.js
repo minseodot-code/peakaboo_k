@@ -30,17 +30,18 @@ async function main(){
   const V=await viewReady;   // 보기 전용 링크면 그 내용만 보여주고 아무것도 저장·삭제하지 않음
   let BOOKS=[];
   const mine = V ? (Array.isArray(V.k)&&V.k.length?V.k:null) : (()=>{ try { const v=JSON.parse(localStorage.getItem('peakaboo-books')||'null'); return Array.isArray(v)&&v.length?v:null; } catch(e){ return null; } })();
-  if (mine) BOOKS=mine; else try { BOOKS=await (await fetch('data/books.json')).json(); } catch(e){}
+  BOOKS = mine || [];   // 내가 기록한 책 (예시 책 없음)
   const bySlug=new Map(BOOKS.map((b,i)=>[bookSlug(b),{b,i}]));
   const color=sl=>{ const r=bySlug.get(sl); return r ? (bookColor(r.b)||PALETTE[(r.i*5)%PALETTE.length]) : '#B39573'; };
   // 예전 방문에서 쌓인 더미도 기록에 포함
   const arch=V ? V.a.map(([s,t])=>({s,t})) : readList(ARCHIVE_KEY), seen=new Set(arch.map(r=>r.s));
   for (const s of (V ? V.p : readList(PILE_KEY))) if (!seen.has(s)){ arch.push({s,t:0}); seen.add(s); }
   let memos={}; if (V) memos=V.m; else try { memos=JSON.parse(localStorage.getItem(MEMO_KEY)||'{}')||{}; } catch(e){}
+  for (const b of BOOKS){ const sl=bookSlug(b); if (!seen.has(sl)){ arch.push({s:sl,t:b.t||0}); seen.add(sl); } }   // 기록한 책은 모두 모음에
   const rows=arch.filter(r=>bySlug.has(r.s)).sort((a,b)=>b.t-a.t);
   $('#sum').textContent = rows.length
     ? `여우가 먹고 꿈꾼 책 ${rows.length}권. 책을 누르면 그 꿈을 다시 펼쳐요.`
-    : '아직 여우가 먹은 책이 없어요. 언덕으로 돌아가 책장을 눌러 보세요.';
+    : '아직 기록한 책이 없어요. 풀밭으로 돌아가 책장의 책을 눌러 여우에게 먹여 보세요.';
   $('#books').innerHTML=rows.map(r=>{
     const {b}=bySlug.get(r.s), q=(b.quotes&&b.quotes[0])||{t:'',p:''}, c=color(r.s);
     return `<a class="card" href="${viewHome()}#book-${encodeURIComponent(r.s)}" style="--c:${c}">
