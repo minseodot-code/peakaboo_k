@@ -101,7 +101,7 @@ function saveFromDream(b){
   editingBook=null;
   const saved=BOOKS.find(x=>bookSlug(x)===slug);
   renderDream(saved); setDreamHash(saved); revealOnScroll(dreamSeq);
-  flash(b.draft ? (same ? `같은 책의 ${ordinal(same+1)} 기록으로 남겼어요 · 깨어나면 꽃이 하나 더 피어요` : '기록했어요 · 깨어나면 먹은 책 더미와 꽃밭에 들어가요') : '고친 내용을 저장했어요');
+  flash(b.draft ? (same ? `같은 책의 ${ordinal(same+1)} 기록으로 남겼어요 · 깨어나면 꽃이 하나 더 피어요` : '기록했어요 · 깨어나면 언덕에 꽃이 피어요') : '고친 내용을 저장했어요');
   return true;
 }
 function deleteFromDream(b, btn){

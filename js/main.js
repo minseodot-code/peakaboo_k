@@ -75,7 +75,7 @@ function renderPile(){
 }
 function placePile(){
   const pz=PILE.z+cam;                       // 안쪽으로 들어가면 더미는 입구에 남아 뒤로 멀어짐
-  pileEl.style.display = (pz>520 || !pile.length) ? 'none' : '';
+  pileEl.style.display = 'none';            // 언덕에는 꽃만: 더미 책은 그리지 않음 (pile 목록은 꽃밭에 그대로 씀)
   pileEl.style.transform=`translate3d(${PILE.x-150}px,${FLOOR-420}px,${pz}px)`;
 }
 /* 책꽃: 여우가 먹은 책마다 언덕에 그 책 색의 꽃이 한 송이 핌. 먹은 책 더미(pile)와 같은 목록을 써서 다음에 와도 남아 있음.
@@ -144,12 +144,13 @@ function swapViews(fly, dur){      // 비행 시간 동안 그림을 앞 방향�
 }
 async function addToPile(i){
   if (i==null || (VIEW && !pile.includes(i))) return;
-  if (pile.includes(i)){                     // 이미 쌓인 책이면 그 책만 살짝 반짝
-    const el=pileEl.querySelector(`.pbook[data-b="${i}"]`);
+  if (pile.includes(i)){                     // 이미 핀 꽃이면 그 꽃만 살짝 반짝
+    const el=gardenEl.querySelector(`.bflower[data-b="${i}"]`);
     if (el) el.animate([{filter:'brightness(1)'},{filter:'brightness(1.6)'},{filter:'brightness(1)'}],{duration:900});
     return;
   }
   pile.push(i); savePile(); recordArchive([i]); renderPile(); placePile(); bloomFlower(i);
+  return;                                   // 언덕에는 꽃만 (아래 책이 더미로 날아가는 장면은 더미를 다시 보일 때 쓰려고 남겨 둠)
   const el=pileEl.querySelector(`.pbook[data-b="${i}"]`); if (!el) return;
   const to=el.getBoundingClientRect(), from=headPoint();
   el.style.visibility='hidden';
