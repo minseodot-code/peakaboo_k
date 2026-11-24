@@ -33,7 +33,7 @@
   - `cutFlowers()`: 여우가 가까운 꽃부터 찾아가(바로 옆 120px 안의 꽃은 그 자리에서 이어서) 가위로 자름: snip 포즈(r_snip_open ↔ r_snip_shut, `snipFlower()`), 가위 날이 맞물리는 곳 `SNIP_AT`이 꽃줄기에 오도록 `snipReach()`만큼 옆에 섬(오른쪽 끝·더미 근처 꽃은 반대편). 잘린 꽃은 떠올라 여우 품으로 → 화면 앞(`GIVE`)으로 나와 빈 꽃다발을 든 포즈(`give` = r_give)가 되면 꽃이 한 송이씩 꽂힘. 꽃은 여우 안의 층(`makeGiveLayer()`, #giveLayer)에 그려지고 그 위를 앞쪽 포장지·앞발 그림(r_give_front)이 덮음. 꽃 꽂는 점은 `GIVE_STEM`(그림 비율) → `giveBouquet()`: 카메라(#stage)가 꽃다발 쪽으로 확대 → '꽃다발 받기'(또는 Esc)로 받으면 꽃다발만(r_give_wrap + r_give_wrapfront + 꽃) 화면 아래로 내려가고 여우는 빈손(stand)으로 꾸벅. 꽃밭과 `pile`은 비워짐
   - 기록: `peakaboo-archive`(먹은 책 slug와 처음 먹은 시각, 꽃을 잘라도 남음), `peakaboo-bouquets`(받은 꽃다발). archive.html 아래 '기록 모두 지우기'로 전부 초기화
   - 꽃 모양은 `flowerType(slug)`(책 제목 해시)라 archive.js도 같은 꽃을 그림. 바꾸면 두 파일 모두 맞출 것
-- 먹은 책 더미: `pile`(책 번호 목록)을 `localStorage`의 `peakaboo-pile`에 책 제목 slug로 저장해 다음 방문에도 남음. 더미의 책을 누르면 `dreamAgain()`으로 그 책을 다시 꿈꿈. 위치는 `PILE`, 한 더미 최대 권수는 `PILE_PER_STACK`
+- 먹은 책 더미: **지금은 화면에 안 보임**(언덕엔 꽃만, `placePile()`이 숨김, `addToPile()`은 꽃만 피우고 끝). `pile`(책 번호 목록)은 꽃밭이 그대로 씀. `pile`을 `localStorage`의 `peakaboo-pile`에 책 제목 slug로 저장해 다음 방문에도 남음. 더미의 책을 누르면 `dreamAgain()`으로 그 책을 다시 꿈꿈. 위치는 `PILE`, 한 더미 최대 권수는 `PILE_PER_STACK`
 - 꿈 주소: `#book-제목`(공백→`-`, `bookSlug()`). 그 주소로 들어오면 `intro()` 대신 `openFromLink()`로 바로 꿈. 구절은 `revealOnScroll()`이 화면에 들어올 때 하나씩 띄움. 물감 색은 `tintDream()`이 책 color로 `--t1/--t3` 지정
 
 ## 좌표
