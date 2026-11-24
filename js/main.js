@@ -801,13 +801,24 @@ function crumbs(){
 }
 function startZz(){
   stopZz();
-  zzTimer=setInterval(()=>{
+  let k=0;
+  const puff=()=>{
     const hp=headPoint();
-    const z=document.createElement('div'); z.className='zz'; z.textContent='z';
-    z.style.fontSize=rand(14,22)+'px'; z.style.left=hp.x+'px'; z.style.top=(hp.y-24)+'px';
+    const z=document.createElement('div'); z.className='zz'; z.textContent=(k%3===2)?'Z':'z';
+    z.style.fontSize=(20+(k%3)*8)+'px';                       // z → z → Z 순서로 점점 크게
+    z.style.left=(hp.x+8)+'px'; z.style.top=(hp.y-30)+'px';
     document.body.appendChild(z);
-    z.animate([{transform:'none',opacity:0},{opacity:1,offset:.2},{transform:`translate(${rand(10,40)}px,-70px)`,opacity:0}],{duration:2200}).finished.then(()=>z.remove());
-  }, 700);
+    const dx=rand(30,60), sw=rand(8,14);
+    z.animate([
+      {transform:'translate(0,0) scale(.6) rotate(-8deg)',opacity:0},
+      {transform:`translate(${dx*.3}px,-30px) scale(.9) rotate(4deg)`,opacity:1,offset:.25},
+      {transform:`translate(${dx*.6+sw}px,-70px) scale(1.15) rotate(-6deg)`,opacity:.9,offset:.6},
+      {transform:`translate(${dx}px,-110px) scale(1.35) rotate(8deg)`,opacity:0}
+    ],{duration:2800,easing:'ease-out'}).finished.then(()=>z.remove());
+    k++;
+  };
+  puff();
+  zzTimer=setInterval(puff, 650);
 }
 function stopZz(){ clearInterval(zzTimer); zzTimer=null; }
 
