@@ -1,3 +1,6 @@
+/* 글꼴: 은디나루(은글꼴, 자유 공개 글꼴). 한글·영문·문장부호만 남겨 woff2로 줄임 (assets/fonts) */
+@font-face{font-family:'UnDinaru';font-weight:400;font-display:swap;src:url(../assets/fonts/undinaru-v1.woff2) format('woff2')}
+@font-face{font-family:'UnDinaru';font-weight:700;font-display:swap;src:url(../assets/fonts/undinaru-bold-v1.woff2) format('woff2')}
 :root{
   --floor: 9vh;
   --fox: 190px;
@@ -12,7 +15,7 @@
   --pencil: rgba(52,34,20,.78);
 }
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;overflow:hidden;background:#0b0b0b;font-family:'Gowun Dodum',sans-serif}
+html,body{margin:0;height:100%;overflow:hidden;background:#0b0b0b;font-family:'UnDinaru',sans-serif}
 
 /* ---------- 현실: 검은 무대 ---------- */
 #stage{
@@ -166,7 +169,7 @@ svg .head{transform-box:fill-box;transform-origin:50% 100%}
 .crumb{position:fixed;z-index:21;pointer-events:none;
   background:#e6dcc4 repeating-linear-gradient(0deg,transparent 0 2px,rgba(80,64,44,.28) 2px 3px);
   filter:brightness(.82);transform-style:preserve-3d;will-change:transform}
-.zz{position:fixed;z-index:21;color:#c9bfae;font-family:'Gowun Batang',serif;pointer-events:none}
+.zz{position:fixed;z-index:21;color:#c9bfae;font-family:'UnDinaru',sans-serif;pointer-events:none}
 
 #hint{
   position:fixed;left:50%;bottom:3.2vh;transform:translateX(-50%);
@@ -192,10 +195,10 @@ svg .head{transform-box:fill-box;transform-origin:50% 100%}
 
 .dream-inner{position:relative;max-width:640px;margin:0 auto;padding:14vh 28px 12vh}
 .kicker{font-size:12px;letter-spacing:.14em;color:var(--muted);margin:0 0 18px}
-.dtitle{font-family:'Gowun Batang',serif;font-weight:700;font-size:clamp(26px,4vw,36px);margin:0 0 6px;line-height:1.3}
+.dtitle{font-family:'UnDinaru',sans-serif;font-weight:700;font-size:clamp(26px,4vw,36px);margin:0 0 6px;line-height:1.3}
 .dauthor{color:var(--muted);margin:0 0 48px;font-size:15px}
 .q{margin:0 0 44px;padding:0}
-.q p{font-family:'Gowun Batang',serif;font-size:clamp(20px,2.6vw,25px);line-height:1.85;white-space:pre-line;margin:0 0 10px}
+.q p{font-family:'UnDinaru',sans-serif;font-size:clamp(20px,2.6vw,25px);line-height:1.85;white-space:pre-line;margin:0 0 10px}
 .q span{font-size:12px;color:var(--muted);letter-spacing:.06em}
 .fnote{border-top:1px solid #d6cbb6;padding-top:22px;margin:56px 0 24px}
 .fnote small{display:block;font-size:12px;color:var(--muted);letter-spacing:.1em;margin-bottom:8px}
@@ -316,11 +319,11 @@ html,body{background:var(--cream)}
 .tool:hover .tip,.tool:focus-visible .tip{opacity:1;transform:translate(0,-50%)}
 :is(#snipAsk,#keyAsk){position:absolute;right:66px;bottom:-6px;width:260px;padding:18px 18px 16px;border-radius:18px;color:#4a3f32;
   background:#f6efdf url(../assets/tex/paper.webp);border:1.5px solid rgba(91,67,48,.45);box-shadow:0 10px 30px rgba(80,60,30,.2)}
-:is(#snipAsk,#keyAsk) p{margin:0 0 8px;font-family:'Gowun Batang',serif;font-size:16px;line-height:1.6}
+:is(#snipAsk,#keyAsk) p{margin:0 0 8px;font-family:'UnDinaru',sans-serif;font-size:16px;line-height:1.6}
 :is(#snipAsk,#keyAsk) small{display:block;color:#857865;font-size:12px;line-height:1.5;margin-bottom:14px}
 :is(#snipAsk,#keyAsk) .ask-btns{display:flex;gap:8px}
 :is(#snipAsk,#keyAsk) p+.ask-pick{margin-top:-4px}
-.ask-pick{display:flex;align-items:center;gap:8px;margin:0 0 6px;font-family:'Gowun Batang',serif;font-size:16px}
+.ask-pick{display:flex;align-items:center;gap:8px;margin:0 0 6px;font-family:'UnDinaru',sans-serif;font-size:16px}
 #snipCount{font:inherit;font-size:16px;font-weight:700;color:#3B342A;padding:4px 30px 4px 12px;border-radius:10px;cursor:pointer;
   border:1.5px solid rgba(91,67,48,.45);background:#fbf6ea url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%235B4330' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E") right 10px center/11px 8px no-repeat;
   -webkit-appearance:none;appearance:none}
@@ -343,7 +346,7 @@ html,body{background:var(--cream)}
 #giftCard{position:fixed;left:50%;bottom:4vh;transform:translate(-50%,12px);z-index:23;text-align:center;opacity:0;transition:opacity .6s,transform .6s;color:#4a3f32;max-width:min(560px,90vw);
   padding:16px 26px 18px;border-radius:20px;background:rgba(247,241,227,.9) url(../assets/tex/paper.webp);box-shadow:0 8px 24px rgba(80,60,30,.15)}
 #giftCard.show{opacity:1;transform:translate(-50%,0)}
-#giftCard .g1{margin:0 0 4px;font-family:'Gowun Batang',serif;font-weight:700;font-size:22px}
+#giftCard .g1{margin:0 0 4px;font-family:'UnDinaru',sans-serif;font-weight:700;font-size:22px}
 #giftCard .g2{margin:0 0 4px;font-size:14px;color:#6f6352}
 #giftCard .g3{margin:0 0 14px;font-size:12px;color:#8a7d69;line-height:1.6}
 #giftCard button{font-family:inherit;font-size:14px;padding:11px 22px;border-radius:999px;border:none;background:#3B342A;color:#f3ede1;cursor:pointer}
@@ -360,7 +363,7 @@ html,body{background:var(--cream)}
 .dmemo{margin:64px 0 40px;padding-top:26px;border-top:1px solid rgba(243,236,220,.22)}
 .dmemo .dlabel{margin-bottom:12px}
 #memo{display:block;width:100%;min-height:84px;resize:none;overflow:hidden;box-sizing:border-box;padding:14px 16px;border-radius:14px;
-  font-family:'Gowun Batang',serif;font-size:17px;line-height:1.8;color:var(--ink);
+  font-family:'UnDinaru',sans-serif;font-size:17px;line-height:1.8;color:var(--ink);
   background:rgba(18,24,44,.32);border:1px solid rgba(243,236,220,.24);transition:border-color .3s,background .3s}
 #memo::placeholder{color:var(--muted);opacity:.8}
 #memo:focus{outline:none;border-color:rgba(243,236,220,.6);background:rgba(18,24,44,.42)}
@@ -370,7 +373,7 @@ html,body{background:var(--cream)}
 .tool[hidden]{display:none}
 body.view-only #shelf{cursor:default}
 body.view-only #spineHL{display:none}
-.memo-view{margin:0;font-family:'Gowun Batang',serif;font-size:17px;line-height:1.8;white-space:pre-line;color:var(--ink)}
+.memo-view{margin:0;font-family:'UnDinaru',sans-serif;font-size:17px;line-height:1.8;white-space:pre-line;color:var(--ink)}
 
 #gardenKey{display:block;width:100%;box-sizing:border-box;margin:4px 0 8px;padding:9px 12px;border-radius:10px;font:inherit;font-size:15px;
   border:1.5px solid rgba(91,67,48,.45);background:#fbf6ea;color:#3B342A}
@@ -380,18 +383,18 @@ body.view-only #spineHL{display:none}
 #curtain{position:fixed;inset:0;z-index:300;display:grid;place-items:center;pointer-events:none;
   background:linear-gradient(rgba(240,230,205,.38),rgba(240,230,205,.38)),#efe6cf url(../assets/tex/paper.webp);transition:opacity .7s ease}
 #curtain.up{opacity:0}
-#curtain p{margin:0;font-family:'Gowun Batang',serif;font-size:15px;color:#8a7d69;letter-spacing:.06em;opacity:0;animation:curtainHint .6s ease 1.2s forwards}
+#curtain p{margin:0;font-family:'UnDinaru',sans-serif;font-size:15px;color:#8a7d69;letter-spacing:.06em;opacity:0;animation:curtainHint .6s ease 1.2s forwards}
 @keyframes curtainHint{to{opacity:1}}   /* 금방 준비되면 문구조차 안 보이게, 1.2초가 넘을 때만 */
 @media (prefers-reduced-motion:reduce){ #curtain{transition:opacity .2s} }
 
 /* 꿈 페이지 쓰기 화면 (js/write.js renderEditor): 밤하늘 위에 글씨처럼 */
 .ed-kick{margin:0 0 18px;font-size:12px;letter-spacing:.16em;color:var(--muted)}
 .ed-title,.ed-author,.ed-q textarea,.ed-q input,#dreamInner #memo{font:inherit;color:var(--ink);background:rgba(18,24,44,.32);border:1px solid rgba(243,236,220,.24);border-radius:12px;padding:10px 14px;box-sizing:border-box;width:100%}
-.ed-title{display:block;font-family:'Gowun Batang',serif;font-weight:700;font-size:clamp(26px,4.4vw,40px);padding:10px 14px;margin:0 0 10px}
+.ed-title{display:block;font-family:'UnDinaru',sans-serif;font-weight:700;font-size:clamp(26px,4.4vw,40px);padding:10px 14px;margin:0 0 10px}
 .ed-author{display:block;font-size:16px;margin:0 0 48px;max-width:360px}
 .ed-quotes{margin:0 0 10px}
 .ed-q{display:grid;grid-template-columns:1fr 84px 34px;gap:8px;align-items:start;margin:0 0 10px}
-.ed-q textarea{font-family:'Gowun Batang',serif;font-size:18px;line-height:1.8;resize:none;overflow:hidden;min-height:60px}
+.ed-q textarea{font-family:'UnDinaru',sans-serif;font-size:18px;line-height:1.8;resize:none;overflow:hidden;min-height:60px}
 .ed-q input{font-size:14px}
 .ed-qdel{height:40px;border:none;background:none;color:var(--muted);font-size:22px;cursor:pointer;border-radius:10px}
 .ed-qdel:hover,.ed-qdel:focus-visible{background:rgba(243,236,220,.1);color:var(--ink);outline:none}
