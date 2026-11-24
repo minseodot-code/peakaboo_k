@@ -383,3 +383,33 @@ body.view-only #spineHL{display:none}
 #curtain p{margin:0;font-family:'Gowun Batang',serif;font-size:15px;color:#8a7d69;letter-spacing:.06em;opacity:0;animation:curtainHint .6s ease 1.2s forwards}
 @keyframes curtainHint{to{opacity:1}}   /* 금방 준비되면 문구조차 안 보이게, 1.2초가 넘을 때만 */
 @media (prefers-reduced-motion:reduce){ #curtain{transition:opacity .2s} }
+
+/* 책 기록하기 창 (js/write.js) */
+#bookForm{position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:20px;background:rgba(60,48,32,.28);overflow:auto}
+#bookForm[hidden]{display:none}
+.bf-card{width:min(560px,100%);max-height:calc(100vh - 40px);overflow:auto;box-sizing:border-box;padding:26px 26px 20px;border-radius:20px;color:#3B342A;
+  background:#f6efdf url(../assets/tex/paper.webp);border:1.5px solid rgba(91,67,48,.4);box-shadow:0 18px 48px rgba(60,40,20,.25)}
+.bf-card h2{margin:0 0 18px;font-family:'Gowun Batang',serif;font-size:22px}
+.bf-f{display:flex;flex-direction:column;gap:6px;margin:0 0 14px;font-size:13px;color:#6f6352}
+.bf-f small,.bf-quotes small{color:#9a8c76;font-size:12px}
+.bf-card input,.bf-card textarea{font:inherit;font-size:16px;color:#3B342A;background:#fbf7ee;border:1.5px solid rgba(91,67,48,.3);border-radius:10px;padding:9px 12px;box-sizing:border-box;width:100%}
+.bf-card textarea{font-family:'Gowun Batang',serif;line-height:1.7;resize:vertical}
+.bf-card input:focus,.bf-card textarea:focus{outline:none;border-color:#8a9ba8;box-shadow:0 0 0 3px rgba(138,155,168,.25)}
+.bf-quotes{border:0;margin:0 0 14px;padding:0}
+.bf-quotes legend{font-size:13px;color:#6f6352;margin-bottom:6px;padding:0}
+.bf-q{display:grid;grid-template-columns:1fr 78px 30px;gap:8px;align-items:start;margin-bottom:8px}
+.bf-qdel{width:30px;height:38px;border:none;background:none;color:#9a8c76;font-size:20px;cursor:pointer;border-radius:8px}
+.bf-qdel:hover,.bf-qdel:focus-visible{background:rgba(91,67,48,.08);color:#5B4330;outline:none}
+.bf-addq{font:inherit;font-size:13px;color:#5B4330;background:none;border:1px dashed rgba(91,67,48,.45);border-radius:999px;padding:6px 14px;cursor:pointer}
+.bf-swatches{display:flex;flex-wrap:wrap;gap:8px}
+.bf-sw{width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,255,255,.8);box-shadow:0 0 0 1px rgba(91,67,48,.3);cursor:pointer;padding:0}
+.bf-sw[aria-pressed="true"]{box-shadow:0 0 0 2.5px #3B342A}
+.bf-sw:focus-visible{outline:2px solid #8a9ba8;outline-offset:2px}
+.bf-msg{min-height:1.2em;margin:0 0 8px;font-size:13px;color:#9c5062}
+.bf-btns{display:flex;flex-wrap:wrap;gap:8px}
+.bf-btns button{font:inherit;font-size:14px;padding:10px 18px;border-radius:999px;cursor:pointer;border:1px solid #3B342A;background:#3B342A;color:#f3ede1}
+.bf-btns button.ghost{background:transparent;color:#3B342A;border-color:#bfb29a}
+.bf-btns button:focus-visible,.bf-addq:focus-visible,.bf-del:focus-visible{outline:2px solid #8a9ba8;outline-offset:2px}
+.bf-del{display:block;margin:14px 0 0 auto;font:inherit;font-size:12px;color:#9c5062;background:none;border:none;text-decoration:underline;cursor:pointer}
+.bf-del[hidden]{display:none}
+@media (max-width:520px){ .bf-card{padding:20px 16px 16px} .bf-q{grid-template-columns:1fr 64px 26px} }

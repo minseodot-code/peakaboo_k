@@ -20,9 +20,15 @@ const ASSETS = {
    ========================================================= */
 let BOOKS = [];  // data/books.json 에서 불러와요
 const NO_BOOKS=[{title:'책 데이터를 불러오지 못했어요',author:'',tags:[],quotes:[{t:'data/books.json 을 확인해 주세요.',p:''}],note:'',blog:''}];
-function loadBooks(){
-  return fetch('data/books.json').then(r=>r.json()).then(b=>{ BOOKS=Array.isArray(b)&&b.length?b:NO_BOOKS; })
-    .catch(()=>{ BOOKS=NO_BOOKS; });
+/* 책 목록: 사이트에서 직접 쓴 책(이 브라우저 localStorage 'peakaboo-books', js/write.js)이 있으면 그것,
+   보기 전용이면 주인이 올린 책 목록, 둘 다 없으면 data/books.json */
+const MYBOOKS_KEY='peakaboo-books';
+function readMyBooks(){ try { const v=JSON.parse(localStorage.getItem(MYBOOKS_KEY)||'null'); return Array.isArray(v)?v:null; } catch(e){ return null; } }
+async function loadBooks(){
+  const v=await viewReady;
+  const mine = VIEW ? (v && Array.isArray(v.k) && v.k.length ? v.k : null) : readMyBooks();
+  if (mine && mine.length){ BOOKS=mine; return; }
+  try { const b=await (await fetch('data/books.json')).json(); BOOKS=Array.isArray(b)&&b.length?b:NO_BOOKS; } catch(e){ BOOKS=NO_BOOKS; }
 }
 function bookColor(b){ return b && typeof b.color==='string' && CSS.supports('color', b.color) ? b.color : null; }
 const eatenBooks = new Set();  // 꿈에서 이미 보여준 실제 책 번호
@@ -599,7 +605,7 @@ async function idle(){
 let following=false, pointerIn=false, px=0, py=0, lastT=0, stillSince=0;
 /* 커서가 오른쪽 버튼·말풍선 같은 화면 UI 위에 있으면 여우는 따라가지 않고 그 자리에 멈춰 섬
    (버튼이 지평선 근처라 그대로 따라가면 '아주 먼 안쪽'으로 읽혀 책장이 계속 흘러갔음) */
-const UI_SEL='#tools, #giftCard, #toast';
+const UI_SEL='#tools, #giftCard, #toast, #bookForm';
 let uiHold=false, deepSince=0; const DEEP_DWELL=450;
 function holdForUI(e){
   let on=!!(e.target && e.target.closest && e.target.closest(UI_SEL));
@@ -930,10 +936,12 @@ function renderDream(b){
     </div>`}
     <div class="actions rv">
       ${b.blog?`<a href="${esc(b.blog)}" target="_blank" rel="noopener">블로그 서평 읽기</a>`:''}
+      ${VIEW?'':'<button id="editBook" type="button" class="ghost">고쳐 쓰기</button>'}
       <button id="share" type="button" class="ghost">이 꿈 링크 복사</button>
       <button id="wake" type="button">꿈에서 깨기</button>
     </div>`;
   dreamInner.querySelector('#wake').addEventListener('click', wake);
+  const eb=dreamInner.querySelector('#editBook'); if (eb) eb.addEventListener('click', ()=>openBookForm(BOOKS.indexOf(b)));
   dreamInner.querySelector('#share').addEventListener('click', ()=>copyDreamLink(b));
   const ta=dreamInner.querySelector('#memo'), st=dreamInner.querySelector('#memoState'); let tmr=0;
   if (!ta) return;
@@ -1143,7 +1151,7 @@ function setupViewMode(){
   document.body.classList.add('view-only');
   $('#label').textContent='밑줄 먹는 여우 · 보기 전용';
   hint.textContent = viewLoadFailed ? '꽃밭을 불러오지 못했어요 · 잠시 뒤 새로고침해 주세요' : pile.length ? (matchMedia('(pointer:coarse)').matches ? '풀밭의 꽃을 누르면 그 책의 꿈을 꿔요' : '커서를 움직이면 여우가 따라와요 · 풀밭의 꽃을 누르면 그 책의 꿈을 꿔요') : '아직 핀 꽃이 없어요';
-  $('#snip').hidden=true; $('#shareView').hidden=true; snipAsk.hidden=true; keyAsk.hidden=true;
+  $('#snip').hidden=true; $('#shareView').hidden=true; $('#writeBook').hidden=true; snipAsk.hidden=true; keyAsk.hidden=true;
   $('#toArchive').href='/archive'+viewQuery();   // .html 을 붙이면 서버가 깨끗한 주소로 넘기며 ?view= 를 버릴 수 있음
   shelf.setAttribute('aria-label','책장 (보기 전용)'); shelf.removeAttribute('role');
 }
@@ -1203,7 +1211,7 @@ function onShelf(e){
 }
 shelf.addEventListener('click', onShelf);
 shelf.addEventListener('keydown', e=>{ if (e.key==='Enter'||e.key===' '){ e.preventDefault(); onShelf(); } });
-addEventListener('keydown', e=>{ if (e.key==='Escape' && mode==='dream' && !(e.target && e.target.id==='memo')) wake(); });
+addEventListener('keydown', e=>{ if (e.key==='Escape' && mode==='dream' && !(e.target && e.target.id==='memo') && bookFormEl.hidden) wake(); });
 addEventListener('pointermove', e=>{ if (holdForUI(e)) return; px=e.clientX; py=e.clientY; pointerIn=true; pointerMovedAt=performance.now(); if (mode==='idle' && !following) startFollow(); });
 /* 커서 아래 책 강조: 평면 레이어 하나를 그 책 위치로 옮김 (한 프레임에 한 번만) */
 const spineHL=document.createElement('div'); spineHL.id='spineHL'; stage.appendChild(spineHL);

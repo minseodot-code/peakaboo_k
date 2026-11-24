@@ -29,7 +29,8 @@ function flowerHTML(slug, color, h){
 async function main(){
   const V=await viewReady;   // 보기 전용 링크면 그 내용만 보여주고 아무것도 저장·삭제하지 않음
   let BOOKS=[];
-  try { BOOKS=await (await fetch('data/books.json')).json(); } catch(e){}
+  const mine = V ? (Array.isArray(V.k)&&V.k.length?V.k:null) : (()=>{ try { const v=JSON.parse(localStorage.getItem('peakaboo-books')||'null'); return Array.isArray(v)&&v.length?v:null; } catch(e){ return null; } })();
+  if (mine) BOOKS=mine; else try { BOOKS=await (await fetch('data/books.json')).json(); } catch(e){}
   const bySlug=new Map(BOOKS.map((b,i)=>[bookSlug(b),{b,i}]));
   const color=sl=>{ const r=bySlug.get(sl); return r ? (bookColor(r.b)||PALETTE[(r.i*5)%PALETTE.length]) : '#B39573'; };
   // 예전 방문에서 쌓인 더미도 기록에 포함

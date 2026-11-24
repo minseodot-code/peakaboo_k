@@ -19,13 +19,13 @@ async function unpackView(str){
     let raw=bytes;
     if (kind==='z') raw=new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
     const o=JSON.parse(new TextDecoder().decode(raw));
-    return { p:Array.isArray(o.p)?o.p:[], a:Array.isArray(o.a)?o.a:[], m:(o.m&&typeof o.m==='object')?o.m:{}, b:Array.isArray(o.b)?o.b:[] };
+    return { p:Array.isArray(o.p)?o.p:[], a:Array.isArray(o.a)?o.a:[], m:(o.m&&typeof o.m==='object')?o.m:{}, b:Array.isArray(o.b)?o.b:[], k:Array.isArray(o.k)?o.k:null };
   } catch(e){ return {p:[],a:[],m:{},b:[]}; }
 }
 let viewLoadFailed=false;   // /view 에서 꽃밭을 못 불러왔을 때 (저장소 미연결·네트워크) 안내용
 async function fetchGarden(){
   try { const r=await fetch('/api/garden',{cache:'no-store'}); if (!r.ok) throw 0; const o=await r.json();
-    return { p:Array.isArray(o.p)?o.p:[], a:Array.isArray(o.a)?o.a:[], m:(o.m&&typeof o.m==='object')?o.m:{}, b:Array.isArray(o.b)?o.b:[] };
+    return { p:Array.isArray(o.p)?o.p:[], a:Array.isArray(o.a)?o.a:[], m:(o.m&&typeof o.m==='object')?o.m:{}, b:Array.isArray(o.b)?o.b:[], k:Array.isArray(o.k)?o.k:null };
   } catch(e){ viewLoadFailed=true; return {p:[],a:[],m:{},b:[]}; }
 }
 const viewReady = !VIEW ? Promise.resolve(null) : VIEW_SERVER ? fetchGarden() : unpackView(VIEW_RAW);
@@ -35,7 +35,8 @@ function gardenSnapshot(){
   const p=get('peakaboo-pile','[]'), arch=get('peakaboo-archive','[]'), memos=get('peakaboo-memo','{}'), bq=get('peakaboo-bouquets','[]');
   const keep=new Set([...p,...arch.map(r=>r.s)]), m={};
   for (const k in memos) if (keep.has(k) && String(memos[k]).trim()) m[k]=memos[k];
-  return {p, a:arch.map(r=>[r.s,r.t]), m, b:bq.map(q=>({t:q.t,b:q.b}))};
+  const k=get('peakaboo-books','null');   // 사이트에서 직접 쓴 책 목록 (없으면 보기 전용도 data/books.json)
+  return {p, a:arch.map(r=>[r.s,r.t]), m, b:bq.map(q=>({t:q.t,b:q.b})), ...(Array.isArray(k)?{k}:{})};
 }
 /* 이 브라우저의 '꽃밭 주인 표'. 링크 버튼을 처음 누른 브라우저가 주인으로 등록되고(서버), 그 뒤로 이 브라우저의 변화만 /view 에 올라감 */
 const OWNER_STORE='peakaboo-owner', OWNED_STORE='peakaboo-owned';
