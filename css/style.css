@@ -166,7 +166,7 @@ svg .head{transform-box:fill-box;transform-origin:50% 100%}
 .crumb{position:fixed;z-index:21;pointer-events:none;
   background:#e6dcc4 repeating-linear-gradient(0deg,transparent 0 2px,rgba(80,64,44,.28) 2px 3px);
   filter:brightness(.82);transform-style:preserve-3d;will-change:transform}
-.zz{position:fixed;z-index:21;color:#c9bfae;font-family:'Gowun Batang',serif;pointer-events:none}
+.zz{position:fixed;z-index:21;color:#c9bfae;font-family:'Gowun Batang',serif;font-weight:700;line-height:1;pointer-events:none;text-shadow:0 0 6px rgba(255,252,244,.85)}
 
 #hint{
   position:fixed;left:50%;bottom:3.2vh;transform:translateX(-50%);
@@ -271,7 +271,7 @@ html,body{background:var(--cream)}
 #label,#note{color:#7a6e60!important}
 #hint{color:#5f5446!important;background:rgba(244,241,230,.82);padding:6px 14px;border-radius:999px}
 .plabel{color:#7a6e60!important}
-.zz{color:#8a7f70!important}
+.zz{color:#7d5f41!important}
 /* 책장 발치·앞 풀밭에 서 있는 꽃덤불 */
 .clump{position:absolute;bottom:0;pointer-events:none;background-size:contain;background-repeat:no-repeat;background-position:50% 100%;transform-origin:50% 100%}
 
