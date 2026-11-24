@@ -809,7 +809,7 @@ function startZz(){
     z.style.left=(hp.x+8)+'px'; z.style.top=(hp.y-30)+'px';
     document.body.appendChild(z);
     const dx=rand(30,60), sw=rand(8,14);
-    z.animate([
+    z.animate(RM ? [{opacity:0},{opacity:1,offset:.3},{opacity:0}] : [
       {transform:'translate(0,0) scale(.6) rotate(-8deg)',opacity:0},
       {transform:`translate(${dx*.3}px,-30px) scale(.9) rotate(4deg)`,opacity:1,offset:.25},
       {transform:`translate(${dx*.6+sw}px,-70px) scale(1.15) rotate(-6deg)`,opacity:.9,offset:.6},
