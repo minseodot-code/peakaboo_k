@@ -6,7 +6,9 @@ const FLOWERS=['f1','f2','f3','f4','f5','f6','f7','f8','f9'], FLOWER_AR={f1:.493
 const PALETTE=['#8FA2B3','#7D8FA0','#A9B6C0','#C9A46A','#D6BF95','#E2D3B4','#C79A8E','#B48478','#A4AE92','#8E9C85','#9C7C5E','#B39573','#7F9894','#A7A196'];
 const $=s=>document.querySelector(s);
 function hash(str){ let h=2166136261; for (const ch of str){ h^=ch.charCodeAt(0); h=Math.imul(h,16777619); } return h>>>0; }
-function bookSlug(b){ return String(b.title||'').normalize('NFC').trim().replace(/\s+/g,'-'); }
+/* 기록마다 이름표: 보통은 책 이름(띄어쓰기는 -). 같은 책을 여러 번 기록하면 '책-이름~2', '~3'… (b.id에 저장) */
+function titleSlug(b){ return String(b.title||'').normalize('NFC').trim().replace(/\s+/g,'-'); }
+function bookSlug(b){ return typeof b.id==='string' && b.id ? b.id : titleSlug(b); }
 function bookColor(b){ return b && typeof b.color==='string' && CSS.supports('color', b.color) ? b.color : null; }
 function esc(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function readList(k){ try { const v=JSON.parse(localStorage.getItem(k)||'[]'); return Array.isArray(v)?v:[]; } catch(e){ return []; } }
@@ -26,6 +28,17 @@ function flowerHTML(slug, color, h){
   const f=FLOWERS[hash(slug+'#flower')%FLOWERS.length], w=Math.round(h*FLOWER_AR[f]);
   return `<span class="fl" style="width:${w}px;height:${h}px;background-image:url(assets/flowers/${f}.webp);--c:${color}"><i style="-webkit-mask-image:url(assets/flowers/${f}m.webp);mask-image:url(assets/flowers/${f}m.webp)"></i></span>`;
 }
+/* 검색: 띄어쓰기로 나눈 낱말이 모두 들어 있는 기록만 보여줌 (책 이름·작가·구절·메모, 대소문자 무시) */
+function ordinal(n){ return (['첫','두','세','네','다섯','여섯','일곱','여덟','아홉','열'][n-1]||n)+' 번째'; }
+function norm(s){ return String(s||'').normalize('NFC').toLowerCase(); }
+let total=0;
+function applySearch(){
+  const words=norm($('#q').value).split(/\s+/).filter(Boolean); let n=0;
+  for (const c of document.querySelectorAll('#books .card')){ const ok=words.every(w=>c.dataset.q.includes(w)); c.hidden=!ok; if (ok) n++; }
+  $('#found').textContent = !words.length ? '' : n ? `'${$('#q').value.trim()}' 검색 결과 ${n}개` : `'${$('#q').value.trim()}'이(가) 들어간 기록이 없어요`;
+}
+$('#q').addEventListener('input', applySearch);
+$('#q').addEventListener('keydown', e=>{ if (e.key==='Escape' && $('#q').value){ $('#q').value=''; applySearch(); } });
 async function main(){
   const V=await viewReady;   // 보기 전용 링크면 그 내용만 보여주고 아무것도 저장·삭제하지 않음
   let BOOKS=[];
@@ -40,20 +53,27 @@ async function main(){
   for (const b of BOOKS){ const sl=bookSlug(b); if (!seen.has(sl)){ arch.push({s:sl,t:b.t||0}); seen.add(sl); } }   // 기록한 책은 모두 모음에
   const rows=arch.filter(r=>bySlug.has(r.s)).sort((a,b)=>b.t-a.t);
   $('#sum').textContent = rows.length
-    ? `여우가 먹고 꿈꾼 책 ${rows.length}권. 책을 누르면 그 꿈을 다시 펼쳐요.`
+    ? `여우가 먹고 꿈꾼 기록 ${rows.length}개. 책을 누르면 그 꿈을 다시 펼쳐요.`
     : '아직 기록한 책이 없어요. 풀밭으로 돌아가 책장의 책을 눌러 여우에게 먹여 보세요.';
+  // 같은 책을 여러 번 기록했으면 먹은 순서대로 'n번째 기록'
+  const nth=new Map(), seenT=new Map(), groups=new Map();
+  for (const r of rows) { const k=titleSlug(bySlug.get(r.s).b); groups.set(k,(groups.get(k)||0)+1); }
+  for (const r of rows.slice().reverse()) { const k=titleSlug(bySlug.get(r.s).b); if (groups.get(k)>1){ const n=(seenT.get(k)||0)+1; seenT.set(k,n); nth.set(r.s,n); } }
   $('#books').innerHTML=rows.map(r=>{
     const {b}=bySlug.get(r.s), q=(b.quotes&&b.quotes[0])||{t:'',p:''}, c=color(r.s);
-    return `<a class="card" href="${viewHome()}#book-${encodeURIComponent(r.s)}" style="--c:${c}">
+    const memo=memos[r.s]!=null?memos[r.s]:(b.note||'');
+    const hay=[b.title,b.author,...(b.quotes||[]).map(x=>x&&x.t),memo].filter(Boolean).join('\n');
+    return `<a class="card" href="${viewHome()}#book-${encodeURIComponent(r.s)}" style="--c:${c}" data-q="${esc(norm(hay))}">
       <span class="flw">${flowerHTML(r.s,c,92)}</span>
       <span class="txt">
         <strong>${esc(b.title)}</strong>
         <em>${esc(b.author||'')}</em>
         <q>${esc(q.t)}</q>
         ${(memos[r.s]||b.note)?`<span class="memo">메모 · ${esc(memos[r.s]!=null?memos[r.s]:b.note)}</span>`:''}
-        <small>${r.t?dateFmt.format(r.t)+'에 먹음 · ':''}구절 ${(b.quotes||[]).length}개</small>
+        <small>${nth.has(r.s)?ordinal(nth.get(r.s))+' 기록 · ':''}${r.t?dateFmt.format(r.t)+'에 먹음 · ':''}구절 ${(b.quotes||[]).length}개</small>
       </span></a>`;
   }).join('');
+  $('#searchBox').hidden=!rows.length; total=rows.length; applySearch();
   const bqs=(V ? V.b : readList(BOUQUET_KEY)).slice().reverse();
   if (bqs.length){
     $('#bqSec').hidden=false;

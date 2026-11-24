@@ -875,7 +875,9 @@ function tintDream(b){
 }
 
 /* 책마다 공유용 주소: #book-제목 (띄어쓰기는 -) */
-function bookSlug(b){ return String(b.title||'').normalize('NFC').trim().replace(/\s+/g,'-'); }
+/* 기록마다 이름표: 보통은 책 이름(띄어쓰기는 -). 같은 책을 여러 번 기록하면 '책-이름~2', '~3'… (b.id에 저장) */
+function titleSlug(b){ return String(b.title||'').normalize('NFC').trim().replace(/\s+/g,'-'); }
+function bookSlug(b){ return typeof b.id==='string' && b.id ? b.id : titleSlug(b); }
 function bookLink(b){ return location.origin+location.pathname+location.search+'#book-'+encodeURIComponent(bookSlug(b)); }
 function bookFromHash(){
   const h=location.hash; if (!h.startsWith('#book-')) return null;

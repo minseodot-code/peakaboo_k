@@ -16,6 +16,11 @@
     <h1>여우가 먹은 책</h1>
     <p id="sum">기록을 불러오는 중이에요</p>
   </header>
+  <div class="search" id="searchBox" hidden>
+    <label for="q" class="sr">기록 검색</label>
+    <input id="q" type="search" placeholder="책 이름, 작가, 구절, 메모에서 찾기" autocomplete="off" enterkeyhint="search">
+    <p id="found" aria-live="polite"></p>
+  </div>
   <section aria-labelledby="hBooks">
     <h2 id="hBooks" class="sr">먹은 책 목록</h2>
     <div id="books" class="grid"></div>

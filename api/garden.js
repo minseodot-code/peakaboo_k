@@ -36,6 +36,7 @@ function clean(o) {      // 꽃밭 모양만 남기고, 너무 크면 거절
         quotes: (Array.isArray(b.quotes) ? b.quotes : []).filter(q => q && typeof q.t === 'string').slice(0, 100).map(q => ({ t: str(q.t, 3000), p: str(q.p, 30) })) };
       if (typeof b.color === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(b.color)) x.color = b.color;
       if (typeof b.note === 'string') x.note = b.note.slice(0, 5000);
+      if (typeof b.id === 'string' && b.id.trim()) x.id = b.id.slice(0, 160);   // 같은 책의 두 번째 기록부터 '이름~2' 같은 이름표
       return x;
     });
   }
