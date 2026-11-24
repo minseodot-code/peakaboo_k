@@ -29,6 +29,16 @@ function clean(o) {      // 꽃밭 모양만 남기고, 너무 크면 거절
     t: Date.now()
   };
   if (o.m && typeof o.m === 'object') for (const k in o.m) if (typeof o.m[k] === 'string') out.m[k] = o.m[k].slice(0, 5000);
+  if (Array.isArray(o.k)) {   // 사이트에서 직접 쓴 책 목록
+    const str = (v, n) => typeof v === 'string' ? v.slice(0, n) : '';
+    out.k = o.k.filter(b => b && typeof b.title === 'string' && b.title.trim()).slice(0, 1000).map(b => {
+      const x = { title: str(b.title, 120), author: str(b.author, 80),
+        quotes: (Array.isArray(b.quotes) ? b.quotes : []).filter(q => q && typeof q.t === 'string').slice(0, 100).map(q => ({ t: str(q.t, 3000), p: str(q.p, 30) })) };
+      if (typeof b.color === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(b.color)) x.color = b.color;
+      if (typeof b.note === 'string') x.note = b.note.slice(0, 5000);
+      return x;
+    });
+  }
   return out;
 }
 

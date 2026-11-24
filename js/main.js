@@ -20,9 +20,13 @@ const ASSETS = {
    ========================================================= */
 let BOOKS = [];  // data/books.json 에서 불러와요
 const NO_BOOKS=[{title:'책 데이터를 불러오지 못했어요',author:'',tags:[],quotes:[{t:'data/books.json 을 확인해 주세요.',p:''}],note:'',blog:''}];
-function loadBooks(){
-  return fetch('data/books.json').then(r=>r.json()).then(b=>{ BOOKS=Array.isArray(b)&&b.length?b:NO_BOOKS; })
-    .catch(()=>{ BOOKS=NO_BOOKS; });
+/* 책 목록 = 내가 기록한 책. 책장의 아무 책이나 먹으면 꿈 페이지에서 직접 써서 기록함(js/write.js)
+   주인: 이 브라우저 localStorage 'peakaboo-books' / 보기 전용: 주인이 올린 목록 (data/books.json 예시 책은 쓰지 않음) */
+const MYBOOKS_KEY='peakaboo-books';
+function readMyBooks(){ try { const v=JSON.parse(localStorage.getItem(MYBOOKS_KEY)||'null'); return Array.isArray(v)?v:null; } catch(e){ return null; } }
+async function loadBooks(){
+  const v=await viewReady;
+  BOOKS = (VIEW ? (v && Array.isArray(v.k) ? v.k : []) : readMyBooks()) || [];
 }
 function bookColor(b){ return b && typeof b.color==='string' && CSS.supports('color', b.color) ? b.color : null; }
 const eatenBooks = new Set();  // 꿈에서 이미 보여준 실제 책 번호
@@ -679,9 +683,10 @@ async function fetchAndSit(chosen){
     if (!near.length) near=all;
     spine=near[Math.floor(Math.random()*near.length)];
   }
-  const bi=spine.dataset.b!=null ? +spine.dataset.b : pickUneaten();
-  const book=BOOKS[bi]; eatenBooks.add(bi);
   const color=spine.dataset.c||spine.style.backgroundColor;
+  const bi=spine.dataset.b!=null ? +spine.dataset.b : -1;
+  const book = bi>=0 ? BOOKS[bi] : newDraft(color);    // 아직 기록하지 않은 책 → 꿈에서 빈칸에 써서 기록
+  if (bi>=0) eatenBooks.add(bi);
   spine.classList.add('picked');
 
   if (Math.abs(x-FX)>30){ setPose('walk'); await moveTo(FX, Math.min(z,ZFRONT), 130); }
@@ -814,7 +819,7 @@ function stopZz(){ clearInterval(zzTimer); zzTimer=null; }
 /* 꿈으로 들어가기 */
 let dreamSeq=0;               // 꿈마다 번호: 도중에 깨면 이전 꿈의 남은 연출을 멈추는 데 씀
 async function enterDream(book){
-  mode='dream'; eaten++; lastDreamBook=BOOKS.indexOf(book);
+  mode='dream'; eaten++; lastDreamBook=BOOKS.indexOf(book); if (lastDreamBook<0) lastDreamBook=null;
   const my=++dreamSeq;
   const hp=headPoint(); const cx=hp.x, cy=hp.y;
   renderDream(book); tintDream(book); setDreamHash(book);
@@ -879,7 +884,7 @@ function bookFromHash(){
   return i<0 ? null : i;
 }
 function setDreamHash(b){
-  if (location.hash==='#debug' || BOOKS===NO_BOOKS) return;   // 조정 패널을 보는 중이면 주소를 건드리지 않음
+  if (location.hash==='#debug' || BOOKS===NO_BOOKS || b.draft) return;   // 조정 패널을 보는 중이면 주소를 건드리지 않음
   history.replaceState(null,'','#book-'+encodeURIComponent(bookSlug(b)));
 }
 function clearDreamHash(){
@@ -916,6 +921,7 @@ const MEMO_KEY='peakaboo-memo';
 function readMemos(){ if (VIEW) return viewData.m; try { const v=JSON.parse(localStorage.getItem(MEMO_KEY)||'{}'); return v&&typeof v==='object'?v:{}; } catch(e){ return {}; } }
 function pageLabel(p){ p=String(p||'').trim(); return !p?'':/^\d+(\s*[-~–]\s*\d+)?$/.test(p)?'p. '+p:p; }
 function renderDream(b){
+  if (!VIEW && (b.draft || editingBook===b)) return renderEditor(b);     // 쓰기 화면 (js/write.js)
   const slug=bookSlug(b), memos=readMemos(), memo=memos[slug]!=null?memos[slug]:(b.note||'');
   const quotes=(b.quotes||[]).filter(q=>q&&q.t);
   dreamInner.innerHTML = `
@@ -923,30 +929,22 @@ function renderDream(b){
     <p class="dauthor rv">${esc(b.author||'')}</p>
     ${quotes.length?`<h2 class="dlabel rv">인상 깊은 문장</h2>`:''}
     ${quotes.map(q=>{ const pg=pageLabel(q.p); return `<blockquote class="q rv"><p>${esc(q.t)}</p>${pg?`<span>${esc(pg)}</span>`:''}</blockquote>`; }).join('')}
-    ${VIEW ? (memo.trim()?`<div class="dmemo rv"><h2 class="dlabel">메모</h2><p class="memo-view">${esc(memo)}</p></div>`:'') : `<div class="dmemo rv">
-      <label class="dlabel" for="memo">메모</label>
-      <textarea id="memo" rows="3" placeholder="이 책에 대해 짧게 남겨 두세요">${esc(memo)}</textarea>
-      <small id="memoState" aria-live="polite">이 브라우저에 저장돼요</small>
-    </div>`}
+    ${memo.trim()?`<div class="dmemo rv"><h2 class="dlabel">메모</h2><p class="memo-view">${esc(memo)}</p></div>`:''}
     <div class="actions rv">
       ${b.blog?`<a href="${esc(b.blog)}" target="_blank" rel="noopener">블로그 서평 읽기</a>`:''}
+      ${VIEW?'':'<button id="editBook" type="button" class="ghost">고쳐 쓰기</button>'}
       <button id="share" type="button" class="ghost">이 꿈 링크 복사</button>
       <button id="wake" type="button">꿈에서 깨기</button>
     </div>`;
   dreamInner.querySelector('#wake').addEventListener('click', wake);
+  const eb=dreamInner.querySelector('#editBook'); if (eb) eb.addEventListener('click', ()=>{ editingBook=b; renderDream(b); revealOnScroll(dreamSeq); });
   dreamInner.querySelector('#share').addEventListener('click', ()=>copyDreamLink(b));
-  const ta=dreamInner.querySelector('#memo'), st=dreamInner.querySelector('#memoState'); let tmr=0;
-  if (!ta) return;
-  const fit=()=>{ ta.style.height='auto'; ta.style.height=Math.max(ta.scrollHeight,84)+'px'; };
-  ta.addEventListener('input', ()=>{ fit(); clearTimeout(tmr); st.textContent='저장하는 중…';
-    tmr=setTimeout(()=>{ const m=readMemos(); m[slug]=ta.value; try { localStorage.setItem(MEMO_KEY, JSON.stringify(m)); st.textContent='저장했어요'; schedulePublish(); } catch(e){ st.textContent='저장하지 못했어요'; } }, 400); });
-  ta.addEventListener('keydown', e=>{ if (e.key==='Escape'){ e.stopPropagation(); ta.blur(); } });   // 메모 중 Esc는 글쓰기만 끝냄 (한 번 더 누르면 꿈에서 깸)
-  requestAnimationFrame(fit);
 }
 
 /* 꿈에서 깨기 */
 async function wake(){
   if (mode!=='dream') return;
+  if (!beforeWake()) return;          // 꿈 페이지에 쓰다 만 기록이 있으면 저장하거나 한 번 더 물음 (js/write.js)
   mode='waking'; stopZz(); if (revealIO) revealIO.disconnect(); clearDreamHash();
   const fade=dream.animate([{opacity:1},{opacity:0}],{duration:800/SPD,easing:'ease',fill:'forwards'});
   if (zoomAnim){ zoomAnim.cancel(); }
@@ -1203,7 +1201,11 @@ function onShelf(e){
 }
 shelf.addEventListener('click', onShelf);
 shelf.addEventListener('keydown', e=>{ if (e.key==='Enter'||e.key===' '){ e.preventDefault(); onShelf(); } });
-addEventListener('keydown', e=>{ if (e.key==='Escape' && mode==='dream' && !(e.target && e.target.id==='memo')) wake(); });
+addEventListener('keydown', e=>{
+  if (e.key!=='Escape' || mode!=='dream') return;
+  const t=e.target; if (t && (t.tagName==='INPUT' || t.tagName==='TEXTAREA')){ t.blur(); return; }   // 쓰는 중 Esc는 글쓰기만 끝냄 (한 번 더 누르면 꿈에서 깸)
+  wake();
+});
 addEventListener('pointermove', e=>{ if (holdForUI(e)) return; px=e.clientX; py=e.clientY; pointerIn=true; pointerMovedAt=performance.now(); if (mode==='idle' && !following) startFollow(); });
 /* 커서 아래 책 강조: 평면 레이어 하나를 그 책 위치로 옮김 (한 프레임에 한 번만) */
 const spineHL=document.createElement('div'); spineHL.id='spineHL'; stage.appendChild(spineHL);

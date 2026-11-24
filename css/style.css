@@ -383,3 +383,22 @@ body.view-only #spineHL{display:none}
 #curtain p{margin:0;font-family:'Gowun Batang',serif;font-size:15px;color:#8a7d69;letter-spacing:.06em;opacity:0;animation:curtainHint .6s ease 1.2s forwards}
 @keyframes curtainHint{to{opacity:1}}   /* 금방 준비되면 문구조차 안 보이게, 1.2초가 넘을 때만 */
 @media (prefers-reduced-motion:reduce){ #curtain{transition:opacity .2s} }
+
+/* 꿈 페이지 쓰기 화면 (js/write.js renderEditor): 밤하늘 위에 글씨처럼 */
+.ed-kick{margin:0 0 18px;font-size:12px;letter-spacing:.16em;color:var(--muted)}
+.ed-title,.ed-author,.ed-q textarea,.ed-q input,#dreamInner #memo{font:inherit;color:var(--ink);background:rgba(18,24,44,.32);border:1px solid rgba(243,236,220,.24);border-radius:12px;padding:10px 14px;box-sizing:border-box;width:100%}
+.ed-title{display:block;font-family:'Gowun Batang',serif;font-weight:700;font-size:clamp(26px,4.4vw,40px);padding:10px 14px;margin:0 0 10px}
+.ed-author{display:block;font-size:16px;margin:0 0 48px;max-width:360px}
+.ed-quotes{margin:0 0 10px}
+.ed-q{display:grid;grid-template-columns:1fr 84px 34px;gap:8px;align-items:start;margin:0 0 10px}
+.ed-q textarea{font-family:'Gowun Batang',serif;font-size:18px;line-height:1.8;resize:none;overflow:hidden;min-height:60px}
+.ed-q input{font-size:14px}
+.ed-qdel{height:40px;border:none;background:none;color:var(--muted);font-size:22px;cursor:pointer;border-radius:10px}
+.ed-qdel:hover,.ed-qdel:focus-visible{background:rgba(243,236,220,.1);color:var(--ink);outline:none}
+.ed-addq{font:inherit;font-size:14px;color:var(--ink);background:none;border:1px dashed rgba(243,236,220,.45);border-radius:999px;padding:8px 16px;cursor:pointer}
+.ed-title:focus,.ed-author:focus,.ed-q textarea:focus,.ed-q input:focus{outline:none;border-color:rgba(243,236,220,.6);background:rgba(18,24,44,.42)}
+.ed-title::placeholder,.ed-author::placeholder,.ed-q textarea::placeholder,.ed-q input::placeholder{color:var(--muted);opacity:.85}
+.ed-msg{min-height:1.2em;margin:4px 0 0;font-size:14px;color:#f2c7b8}
+.ed-del{display:block;margin:28px 0 0;font:inherit;font-size:13px;color:var(--muted);background:none;border:none;text-decoration:underline;cursor:pointer}
+.dlabel small{letter-spacing:0;font-size:11px;opacity:.8;margin-left:6px}
+@media (max-width:520px){ .ed-q{grid-template-columns:1fr 64px 30px} }
